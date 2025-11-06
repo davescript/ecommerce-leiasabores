@@ -73,6 +73,8 @@ export const categories = sqliteTable('categories', {
   slug: text('slug').notNull().unique(),
   image: text('image'),
   description: text('description'),
+  parentId: text('parent_id'),
+  displayOrder: integer('display_order').default(0),
 })
 
 export const productsRelations = relations(products, ({ many }) => ({

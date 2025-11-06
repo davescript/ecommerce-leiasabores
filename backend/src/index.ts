@@ -9,6 +9,7 @@ import checkoutRoutes from './routes/checkout'
 import uploadsRoutes from './routes/uploads'
 import adminRoutes from './routes/admin'
 import r2Routes from './routes/r2'
+import categoriesRoutes from './routes/categories'
 import { errorHandler } from './middleware/errorHandler'
 import { getDb, dbSchema, type DrizzleSchema } from './lib/db'
 import { eq } from 'drizzle-orm'
@@ -57,6 +58,7 @@ app.route('/api/checkout', checkoutRoutes)
 app.route('/api/uploads', uploadsRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/r2', r2Routes)
+app.route('/api/categories', categoriesRoutes)
 
 // Seed direto para Topos de Bolo (proteção por token via ADMIN_SEED_TOKEN)
 app.post('/api/admin/seed-topos', async (c) => {
@@ -159,6 +161,91 @@ app.post('/api/admin/seed-topos', async (c) => {
   } catch (error) {
     console.error('Seed Topos error', error)
     return c.json({ error: 'Failed to seed' }, 500)
+  }
+})
+
+// Seed para Categorias com base no Partyland
+app.post('/api/admin/seed-categories', async (c) => {
+  const token = c.req.query('token')
+  const expected = c.env.ADMIN_SEED_TOKEN
+  if (!expected || token !== expected) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  const db = getDb(c.env as WorkerBindings)
+  const { categories } = dbSchema as DrizzleSchema
+
+  try {
+    const categoriesData = [
+      // Categorias principais
+      { id: 'cat-bolos', name: 'Bolos Personalizados', slug: 'bolos-personalizados', description: 'Bolos personalizados por tema', displayOrder: 0 },
+      { id: 'cat-topos', name: 'Topos de Bolo', slug: 'topos-de-bolo', description: 'Topos premium para bolos', displayOrder: 1 },
+      { id: 'cat-decoracoes', name: 'Decorações para Bolos', slug: 'decoracoes-para-bolos', description: 'Decorações, flores, velas e acessórios', displayOrder: 2 },
+      { id: 'cat-ocasioes', name: 'Ocasiões Especiais', slug: 'ocasioes-especiais', description: 'Bolos e decorações por ocasião', displayOrder: 3 },
+      
+      // Subcategorias de Bolos Personalizados (por tema)
+      { id: 'cat-bolo-aniversario-menina', name: 'Aniversário Menina', slug: 'bolo-aniversario-menina', parentId: 'cat-bolos', displayOrder: 0 },
+      { id: 'cat-bolo-aniversario-menino', name: 'Aniversário Menino', slug: 'bolo-aniversario-menino', parentId: 'cat-bolos', displayOrder: 1 },
+      { id: 'cat-bolo-princesas', name: 'Princesas', slug: 'bolo-princesas', parentId: 'cat-bolos', displayOrder: 2 },
+      { id: 'cat-bolo-super-herois', name: 'Super-Heróis', slug: 'bolo-super-herois', parentId: 'cat-bolos', displayOrder: 3 },
+      { id: 'cat-bolo-frozen', name: 'Frozen', slug: 'bolo-frozen', parentId: 'cat-bolos', displayOrder: 4 },
+      { id: 'cat-bolo-mickey', name: 'Mickey & Minnie', slug: 'bolo-mickey', parentId: 'cat-bolos', displayOrder: 5 },
+      { id: 'cat-bolo-unicornio', name: 'Unicórnio', slug: 'bolo-unicornio', parentId: 'cat-bolos', displayOrder: 6 },
+      { id: 'cat-bolo-dinossauros', name: 'Dinossauros', slug: 'bolo-dinossauros', parentId: 'cat-bolos', displayOrder: 7 },
+      { id: 'cat-bolo-selva', name: 'Selva e Animais', slug: 'bolo-selva', parentId: 'cat-bolos', displayOrder: 8 },
+      { id: 'cat-bolo-futebol', name: 'Futebol e Desporto', slug: 'bolo-futebol', parentId: 'cat-bolos', displayOrder: 9 },
+      { id: 'cat-bolo-arco-iris', name: 'Arco Íris', slug: 'bolo-arco-iris', parentId: 'cat-bolos', displayOrder: 10 },
+      { id: 'cat-bolo-sereia', name: 'Sereia', slug: 'bolo-sereia', parentId: 'cat-bolos', displayOrder: 11 },
+      { id: 'cat-bolo-pirata', name: 'Piratas', slug: 'bolo-pirata', parentId: 'cat-bolos', displayOrder: 12 },
+      { id: 'cat-bolo-construcao', name: 'Construção', slug: 'bolo-construcao', parentId: 'cat-bolos', displayOrder: 13 },
+      { id: 'cat-bolo-carros', name: 'Carros', slug: 'bolo-carros', parentId: 'cat-bolos', displayOrder: 14 },
+      { id: 'cat-bolo-lego', name: 'Lego', slug: 'bolo-lego', parentId: 'cat-bolos', displayOrder: 15 },
+      { id: 'cat-bolo-minecraft', name: 'Minecraft', slug: 'bolo-minecraft', parentId: 'cat-bolos', displayOrder: 16 },
+      { id: 'cat-bolo-pokemon', name: 'Pokémon', slug: 'bolo-pokemon', parentId: 'cat-bolos', displayOrder: 17 },
+      { id: 'cat-bolo-harry-potter', name: 'Harry Potter', slug: 'bolo-harry-potter', parentId: 'cat-bolos', displayOrder: 18 },
+      { id: 'cat-bolo-star-wars', name: 'Star Wars', slug: 'bolo-star-wars', parentId: 'cat-bolos', displayOrder: 19 },
+      
+      // Subcategorias de Topos
+      { id: 'cat-topo-classico', name: 'Topos Clássicos', slug: 'topo-classico', parentId: 'cat-topos', displayOrder: 0 },
+      { id: 'cat-topo-personalizado', name: 'Topos Personalizados', slug: 'topo-personalizado', parentId: 'cat-topos', displayOrder: 1 },
+      { id: 'cat-topo-premium', name: 'Topos Premium', slug: 'topo-premium', parentId: 'cat-topos', displayOrder: 2 },
+      
+      // Subcategorias de Decorações
+      { id: 'cat-decoracao-flores', name: 'Flores de Bolo', slug: 'decoracao-flores', parentId: 'cat-decoracoes', displayOrder: 0 },
+      { id: 'cat-decoracao-velas', name: 'Velas', slug: 'decoracao-velas', parentId: 'cat-decoracoes', displayOrder: 1 },
+      { id: 'cat-decoracao-confetes', name: 'Confetes e Adornos', slug: 'decoracao-confetes', parentId: 'cat-decoracoes', displayOrder: 2 },
+      { id: 'cat-decoracao-bases', name: 'Bases e Caixas', slug: 'decoracao-bases', parentId: 'cat-decoracoes', displayOrder: 3 },
+      { id: 'cat-decoracao-corantes', name: 'Corantes e Coberturas', slug: 'decoracao-corantes', parentId: 'cat-decoracoes', displayOrder: 4 },
+      
+      // Subcategorias de Ocasiões
+      { id: 'cat-ocasiao-natal', name: 'Natal', slug: 'ocasiao-natal', parentId: 'cat-ocasioes', displayOrder: 0 },
+      { id: 'cat-ocasiao-halloween', name: 'Halloween', slug: 'ocasiao-halloween', parentId: 'cat-ocasioes', displayOrder: 1 },
+      { id: 'cat-ocasiao-pascoa', name: 'Páscoa', slug: 'ocasiao-pascoa', parentId: 'cat-ocasioes', displayOrder: 2 },
+      { id: 'cat-ocasiao-casamento', name: 'Casamento', slug: 'ocasiao-casamento', parentId: 'cat-ocasioes', displayOrder: 3 },
+      { id: 'cat-ocasiao-batizado', name: 'Batizado e Comunhão', slug: 'ocasiao-batizado', parentId: 'cat-ocasioes', displayOrder: 4 },
+      { id: 'cat-ocasiao-despedida', name: 'Despedida de Solteira', slug: 'ocasiao-despedida', parentId: 'cat-ocasioes', displayOrder: 5 },
+    ]
+
+    let inserted = 0
+    for (const cat of categoriesData) {
+      const exists = await db.query.categories.findFirst({ where: eq(categories.slug, cat.slug) }).catch(() => null)
+      if (!exists) {
+        await db.insert(categories).values({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+          description: cat.description,
+          parentId: cat.parentId || null,
+          displayOrder: cat.displayOrder,
+        })
+        inserted++
+      }
+    }
+
+    return c.json({ ok: true, inserted })
+  } catch (error) {
+    console.error('Seed categories error', error)
+    return c.json({ error: 'Failed to seed categories' }, 500)
   }
 })
 
