@@ -111,14 +111,14 @@ export function CartDrawer({ children }: CartDrawerProps) {
                     <span className="text-xl text-primary">{formatPrice(total)}</span>
                   </div>
                   <SheetClose asChild>
-                    <Button asChild className="w-full">
-                      <Link to="/carrinho">Ver carrinho completo</Link>
-                    </Button>
+                    <Link to="/carrinho" className="block">
+                      <Button className="w-full">Ver carrinho completo</Button>
+                    </Link>
                   </SheetClose>
                   <SheetClose asChild>
-                    <Button asChild variant="default" className="w-full">
-                      <Link to="/checkout">Finalizar compra</Link>
-                    </Button>
+                    <Link to="/checkout" className="block">
+                      <Button variant="default" className="w-full">Finalizar compra</Button>
+                    </Link>
                   </SheetClose>
                 </div>
               </SheetFooter>
