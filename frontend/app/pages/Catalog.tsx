@@ -9,16 +9,7 @@ import { Input } from '@components/ui/input'
 import { Skeleton } from '@components/ui/skeleton'
 import { useCart } from '@hooks/useCart'
 import { useSEO } from '@hooks/useSEO'
-import { fetchProducts } from '@lib/api'
-
-const categories = [
-  { label: 'Balões', value: 'Balões' },
-  { label: 'Decorações', value: 'Decorações' },
-  { label: 'Temas Infantis', value: 'Temas Infantis' },
-  { label: 'Confetes', value: 'Confetes' },
-  { label: 'Velas', value: 'Velas' },
-  { label: 'Topos de Bolo', value: 'topos-de-bolo' },
-]
+import { fetchProducts, fetchCategories, type Category } from '@lib/api'
 const sortOptions = [
   { value: 'relevancia', label: 'Relevância' },
   { value: 'preco-asc', label: 'Menor Preço' },
@@ -46,6 +37,21 @@ export function Catalog() {
     title: 'Catálogo',
     description: 'Encontre balões, decorações e kits completos para festas inesquecíveis. Filtre por categoria, preço e avaliações.',
   })
+
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+  })
+
+  const flatCategories = useMemo(() => {
+    const flatten = (cats: Category[]): Array<{ label: string; value: string }> => {
+      return cats.flatMap(cat => [
+        { label: cat.name, value: cat.name },
+        ...flatten(cat.children || [])
+      ])
+    }
+    return categoriesData ? flatten(categoriesData) : []
+  }, [categoriesData])
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['products', { searchQuery, selectedCategories, sort, page }],
@@ -172,7 +178,7 @@ export function Catalog() {
               <div className="mb-6">
                 <h3 className="font-bold mb-4">Categorias</h3>
                 <div className="space-y-2">
-                  {categories.map(category => (
+                  {flatCategories.map(category => (
                     <label key={category.value} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -183,8 +189,8 @@ export function Catalog() {
                       <span className="text-sm">{category.label}</span>
                     </label>
                   ))}
+                </div>
               </div>
-            </div>
 
               {availableThemes.length > 0 && (
                 <div className="mb-6">
@@ -273,7 +279,7 @@ export function Catalog() {
             {(selectedCategories.length > 0 || selectedThemes.length > 0) && (
               <div className="mb-6 flex flex-wrap items-center gap-2">
                 {selectedCategories.map((category) => {
-                  const label = categories.find((option) => option.value === category)?.label ?? category
+                  const label = flatCategories.find((option) => option.value === category)?.label ?? category
                   return (
                     <span
                       key={`categoria-${category}`}

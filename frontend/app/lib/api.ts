@@ -9,6 +9,20 @@ export interface PaginatedResponse<T> {
   totalPages: number
 }
 
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  description?: string | null
+  image?: string | null
+  children?: Category[]
+}
+
+export async function fetchCategories() {
+  const response = await api.get<{ data: Category[]; total: number }>('/categories')
+  return response.data.data
+}
+
 export async function fetchProducts(params?: Partial<{ search: string; category: string; sort: string; page: number; limit: number }>) {
   const response = await api.get<PaginatedResponse<Product>>('/products', { params })
   return response.data

@@ -236,7 +236,7 @@ app.post('/api/admin/seed-categories', async (c) => {
     ]
 
     let inserted = 0
-    let updated = 0
+    const updated = 0
     
     for (const cat of categoryStructure) {
       try {

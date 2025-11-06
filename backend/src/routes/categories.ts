@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { getDb, dbSchema } from '../lib/db'
+import { eq } from 'drizzle-orm'
 import type { WorkerBindings } from '../types/bindings'
 
 const router = new Hono()
@@ -17,7 +18,6 @@ router.get('/', async (c) => {
   try {
     const env = c.env as unknown as WorkerBindings
     const db = getDb({ DB: env.DB })
-    const { categories } = dbSchema
 
     const allCategories = await db.query.categories.findMany()
 
@@ -52,10 +52,10 @@ router.get('/:slug', async (c) => {
     const slug = c.req.param('slug')
     const env = c.env as unknown as WorkerBindings
     const db = getDb({ DB: env.DB })
-    const { categories, products } = dbSchema
+    const { categories } = dbSchema
 
     const category = await db.query.categories.findFirst({
-      where: (fields) => fields.slug === slug,
+      where: eq(categories.slug, slug),
     })
 
     if (!category) {
