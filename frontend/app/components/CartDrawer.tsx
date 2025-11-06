@@ -36,7 +36,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
 
   return (
     <Sheet>
-      <SheetTrigger asChild>{children}</SheetTrigger>
+      <SheetTrigger>{children}</SheetTrigger>
       <SheetContent ref={contentRef}>
         <div className="flex h-full flex-col">
           {items.length === 0 ? (
