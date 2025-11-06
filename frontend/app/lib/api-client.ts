@@ -81,6 +81,14 @@ api.interceptors.request.use((config) => {
   }
 
   config.headers = headers
+  
+  // Log para debug
+  console.log('[API Request]', {
+    method: config.method?.toUpperCase(),
+    url: config.baseURL + config.url,
+    data: config.data
+  })
+  
   return config
 })
 
@@ -88,26 +96,41 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('[API Error]', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      method: error.config?.method,
+      baseURL: error.config?.baseURL,
+      fullURL: error.config?.baseURL + error.config?.url,
+      data: error.config?.data,
+      responseData: error.response?.data
+    })
+    
     if (error.response) {
       // Erro com resposta do servidor
       const status = error.response.status
       const message = error.response.data?.error || error.response.data?.message || error.message
       
       if (status === 405) {
-        console.error('Method Not Allowed (405):', {
-          url: error.config?.url,
+        console.error('[API Error] Method Not Allowed (405):', {
+          url: error.config?.baseURL + error.config?.url,
           method: error.config?.method,
-          data: error.config?.data
+          data: error.config?.data,
+          headers: error.config?.headers
         })
-        return Promise.reject(new Error('Método não permitido. Verifique se a rota está configurada corretamente.'))
+        return Promise.reject(new Error(`Método não permitido (405). URL: ${error.config?.baseURL}${error.config?.url}, Método: ${error.config?.method}`))
       }
       
       return Promise.reject(new Error(message || `Erro ${status}: ${error.message}`))
     } else if (error.request) {
       // Requisição feita mas sem resposta
+      console.error('[API Error] No response:', error.request)
       return Promise.reject(new Error('Não foi possível conectar ao servidor. Verifique sua conexão.'))
     } else {
       // Erro ao configurar a requisição
+      console.error('[API Error] Request setup error:', error)
       return Promise.reject(new Error(error.message || 'Erro desconhecido'))
     }
   }
