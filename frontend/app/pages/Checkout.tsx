@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, ArrowLeft, CreditCard, ShieldCheck, Truck, Sparkles } from 'lucide-react'
@@ -21,10 +21,12 @@ const steps = [
 type Step = (typeof steps)[number]['id']
 
 export function Checkout() {
+  const navigate = useNavigate()
   const { items, subtotal, tax, shipping, total } = useCart()
   const [step, setStep] = useState<Step>('shipping')
   const [error, setError] = useState<string | null>(null)
   const [sameAsShipping, setSameAsShipping] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   const [shippingAddress, setShippingAddress] = useState<Address>({
     name: '',
@@ -59,10 +61,26 @@ export function Checkout() {
   })
 
   useEffect(() => {
+    const timer = setTimeout(() => setIsHydrated(true), 50)
+    return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
     if (sameAsShipping) {
       setBillingAddress({ ...shippingAddress })
     }
   }, [sameAsShipping, shippingAddress])
+
+  if (!isHydrated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-light px-4">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary"></div>
+          <p className="text-sm text-gray-500">A carregar o seu carrinho...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!items.length) {
     return (
