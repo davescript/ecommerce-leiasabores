@@ -76,6 +76,13 @@ router.post('/', async (c) => {
     const lineItems = normalizedItems.map((item) => {
       const product = catalog.get(item.productId)!
       const quantity = item.quantity
+      const unitPrice = product.price
+      
+      // Validação: preço não pode ser negativo ou zero
+      if (unitPrice <= 0) {
+        throw new Error(`Invalid price for product ${product.id}`)
+      }
+      
       return {
         price_data: {
           currency: 'eur',
@@ -84,7 +91,7 @@ router.post('/', async (c) => {
             description: product.shortDescription || product.description,
             images: buildImagesForStripe(product),
           },
-          unit_amount: Math.round(product.price * 100),
+          unit_amount: Math.round(unitPrice * 100),
         },
         quantity,
       }
@@ -95,9 +102,23 @@ router.post('/', async (c) => {
       return sum + product.price * item.quantity
     }, 0)
 
+    // Validações de segurança
+    if (subtotal < 0) {
+      return c.json({ error: 'Invalid cart total' }, 400)
+    }
+
+    if (subtotal > 100000) { // Limite de 100k€ por transação
+      return c.json({ error: 'Cart total exceeds maximum allowed' }, 400)
+    }
+
     const tax = Number((subtotal * 0.23).toFixed(2))
     const shipping = subtotal === 0 ? 0 : subtotal >= 39 ? 0 : 5.99
     const total = Number((subtotal + tax + shipping).toFixed(2))
+
+    // Validação final do total
+    if (total <= 0 || !Number.isFinite(total)) {
+      return c.json({ error: 'Invalid order total calculation' }, 400)
+    }
 
     const origin = c.req.header('origin') || 'http://localhost:5173'
     const stripe = getStripe(env)
@@ -115,13 +136,28 @@ router.post('/', async (c) => {
       console.warn('Failed to serialize billing address metadata', error)
     }
 
+    // Múltiplos métodos de pagamento para Portugal/Europa
+    const paymentMethods: Array<'card' | 'ideal' | 'bancontact' | 'eps' | 'giropay' | 'p24' | 'klarna' | 'alipay' | 'wechat_pay' | 'paypal'> = [
+      'card',      // Cartão de crédito/débito
+      'ideal',     // iDEAL (Holanda)
+      'bancontact', // Bancontact (Bélgica)
+      'eps',       // EPS (Áustria)
+      'giropay',   // giropay (Alemanha)
+      'p24',       // Przelewy24 (Polónia)
+      'klarna',    // Klarna (Suécia/Finlândia)
+      'paypal',    // PayPal
+    ]
+
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: paymentMethods,
       mode: 'payment',
       billing_address_collection: 'auto',
       allow_promotion_codes: true,
+      phone_number_collection: {
+        enabled: true,
+      },
       shipping_address_collection: {
-        allowed_countries: ['PT', 'ES'],
+        allowed_countries: ['PT', 'ES', 'BE', 'NL', 'DE', 'AT', 'PL', 'FR', 'IT', 'SE', 'FI', 'DK', 'NO'],
       },
       line_items: lineItems,
       customer_email: body.email,
@@ -136,17 +172,45 @@ router.post('/', async (c) => {
         shippingAddress: shippingAddressJson,
         billingAddress: billingAddressJson,
         items: JSON.stringify(normalizedItems),
+        timestamp: new Date().toISOString(),
+      },
+      // Configurações de segurança e conformidade
+      locale: 'pt',
+      consent_collection: {
+        promotions: 'auto',
+        terms_of_service: 'auto',
       },
     })
 
+    console.log(`✅ Checkout session created: ${session.id} | Total: €${total} | Email: ${body.email}`)
+    
     return c.json({
       checkoutUrl: session.url,
       sessionId: session.id,
     })
   } catch (error) {
-    console.error('Stripe checkout error', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorType = error instanceof Error ? error.constructor.name : 'UnknownError'
+    
+    console.error(`❌ Stripe checkout error [${errorType}]: ${errorMessage}`)
+    console.error('Request details:', {
+      email: body?.email,
+      itemsCount: body?.items?.length,
+      timestamp: new Date().toISOString(),
+    })
+    
+    // Mensagens de erro personalizadas
+    let userMessage = 'Não foi possível processar o pagamento'
+    if (errorMessage.includes('api_key')) {
+      userMessage = 'Erro de configuração no servidor de pagamento'
+    } else if (errorMessage.includes('network')) {
+      userMessage = 'Erro de conectividade. Tente novamente em alguns momentos'
+    } else if (errorMessage.includes('invalid_request')) {
+      userMessage = 'Dados de pagamento inválidos'
+    }
+    
     return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to create checkout session' },
+      { error: userMessage, debugId: session?.id || 'unknown' },
       500,
     )
   }
@@ -179,6 +243,9 @@ router.post('/webhook', async (c) => {
       case 'checkout.session.completed': {
         const session = event.data.object as StripeType.Checkout.Session
         const metadata = session.metadata || {}
+        
+        console.log(`💳 Payment completed: ${session.id} | Amount: €${(session.amount_total || 0) / 100} | Customer: ${session.customer_email}`)
+        
         const existing = await db.query.orders.findFirst({
           where: eq(orders.stripeSessionId, session.id),
         })
@@ -205,8 +272,9 @@ router.post('/webhook', async (c) => {
         const billingAddress = metadata.billingAddress ? JSON.parse(metadata.billingAddress) : session.customer_details
 
         if (!existing) {
+          const orderId = crypto.randomUUID()
           await db.insert(orders).values({
-            id: crypto.randomUUID(),
+            id: orderId,
             userId: metadata.userId || session.customer_email || 'guest',
             stripeSessionId: session.id,
             email: session.customer_email || '',
@@ -220,6 +288,7 @@ router.post('/webhook', async (c) => {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           })
+          console.log(`📦 Order created: ${orderId} | Session: ${session.id}`)
         } else {
           await db
             .update(orders)
@@ -228,10 +297,12 @@ router.post('/webhook', async (c) => {
               updatedAt: new Date().toISOString(),
             })
             .where(eq(orders.id, existing.id))
+          console.log(`📦 Order updated: ${existing.id} | Status: paid`)
         }
 
         if (session.customer_email) {
-          await db.delete(cartItems).where(eq(cartItems.userId, session.customer_email))
+          const deletedCount = await db.delete(cartItems).where(eq(cartItems.userId, session.customer_email))
+          console.log(`🗑️ Cart cleared: ${session.customer_email}`)
         }
 
         return c.json({ received: true })
@@ -239,6 +310,8 @@ router.post('/webhook', async (c) => {
 
       case 'checkout.session.expired': {
         const session = event.data.object as StripeType.Checkout.Session
+        console.warn(`⏱️ Checkout session expired: ${session.id} | Customer: ${session.customer_email}`)
+        
         await db
           .update(orders)
           .set({ status: 'cancelled', updatedAt: new Date().toISOString() })
@@ -248,11 +321,16 @@ router.post('/webhook', async (c) => {
       }
 
       default:
+        console.debug(`📬 Unhandled webhook event: ${event.type}`)
         return c.json({ received: true })
     }
   } catch (error) {
-    console.error('Stripe webhook error', error)
-    return c.json({ error: 'Webhook error' }, 400)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error(`❌ Webhook processing error: ${errorMessage}`, {
+      signature: signature?.substring(0, 10) + '...',
+      timestamp: new Date().toISOString(),
+    })
+    return c.json({ error: 'Webhook processing failed' }, 400)
   }
 })
 

@@ -97,12 +97,61 @@ export function Checkout() {
     )
   }
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  const validatePostalCode = (zipCode: string): boolean => {
+    const ptZipCodeRegex = /^\d{4}-\d{3}$/
+    return ptZipCodeRegex.test(zipCode) || zipCode.length >= 4
+  }
+
   const handleShippingSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (!shippingAddress.name || !shippingAddress.email || !shippingAddress.street || !shippingAddress.city || !shippingAddress.zipCode) {
-      setError('Preencha todos os campos obrigatórios marcados com *')
+    
+    // Validações obrigatórias
+    if (!shippingAddress.name?.trim()) {
+      setError('Nome completo é obrigatório *')
       return
     }
+    
+    if (!shippingAddress.email?.trim()) {
+      setError('Email é obrigatório *')
+      return
+    }
+    
+    if (!validateEmail(shippingAddress.email)) {
+      setError('Email inválido. Verifique o formato (ex: seu.email@dominio.com)')
+      return
+    }
+    
+    if (!shippingAddress.street?.trim()) {
+      setError('Morada é obrigatória *')
+      return
+    }
+    
+    if (!shippingAddress.city?.trim()) {
+      setError('Cidade é obrigatória *')
+      return
+    }
+    
+    if (!shippingAddress.zipCode?.trim()) {
+      setError('Código postal é obrigatório *')
+      return
+    }
+    
+    if (!validatePostalCode(shippingAddress.zipCode)) {
+      setError('Código postal inválido. Use o formato: 1234-567 ou similares')
+      return
+    }
+    
+    // Validação de nome (mínimo 3 caracteres)
+    if (shippingAddress.name.length < 3) {
+      setError('Nome deve ter pelo menos 3 caracteres')
+      return
+    }
+    
     setError(null)
     if (sameAsShipping) {
       setBillingAddress(shippingAddress)
@@ -115,6 +164,23 @@ export function Checkout() {
     setError(null)
 
     try {
+      // Validações finais
+      if (!shippingAddress.email?.trim()) {
+        throw new Error('Email de entrega é obrigatório')
+      }
+
+      if (!validateEmail(shippingAddress.email)) {
+        throw new Error('Email inválido para pagamento')
+      }
+
+      if (items.length === 0) {
+        throw new Error('Carrinho vazio. Adicione produtos antes de pagar')
+      }
+
+      if (total <= 0) {
+        throw new Error('Total inválido. Contacte suporte')
+      }
+
       const payload = {
         items: items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
         shippingAddress,
@@ -122,15 +188,22 @@ export function Checkout() {
         email: shippingAddress.email,
       }
 
+      toast.loading('A processar pagamento... Aguarde alguns momentos')
       const response = await checkoutMutation.mutateAsync(payload)
+      
       if (!response.checkoutUrl) {
-        throw new Error('Não foi possível criar a sessão de pagamento')
+        throw new Error('Não foi possível criar a sessão de pagamento. Tente novamente')
       }
+
+      // Redirect para Stripe Checkout (seguro)
       window.location.href = response.checkoutUrl
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Não foi possível processar o pagamento'
+      const message = err instanceof Error ? err.message : 'Não foi possível processar o pagamento. Contacte suporte'
       setError(message)
-      toast.error(message)
+      toast.error(message, {
+        description: 'Se o problema persistir, contacte-nos pelo email de suporte.',
+      })
+      console.error('Payment error:', err)
     }
   }
 
