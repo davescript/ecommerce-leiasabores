@@ -405,6 +405,25 @@ app.route('/api/categories', categoriesRoutes)
 // Health endpoint sob o prefixo /api para funcionar com rotas de produção
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
+// Debug endpoint sob o prefixo /api
+app.get('/api/debug/config', (c) => {
+  const env = c.env as WorkerBindings
+  
+  // Verificar variáveis de ambiente críticas (sem expor valores sensíveis)
+  return c.json({
+    environment: env.ENVIRONMENT,
+    bindings: {
+      hasDB: !!env.DB,
+      hasR2: !!env.R2,
+      hasStripeKey: !!env.STRIPE_SECRET_KEY,
+      hasStripeWebhookSecret: !!env.STRIPE_WEBHOOK_SECRET,
+      hasJWTSecret: !!env.JWT_SECRET,
+      stripeKeyPreview: env.STRIPE_SECRET_KEY ? `${env.STRIPE_SECRET_KEY.substring(0, 10)}...` : 'MISSING',
+    },
+    timestamp: new Date().toISOString(),
+  })
+})
+
 // Health simples em /health (mantido para compatibilidade)
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 

@@ -213,13 +213,91 @@ export function Checkout() {
 
       // Redirect para Stripe Checkout (seguro)
       window.location.href = response.checkoutUrl
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Não foi possível processar o pagamento. Contacte suporte'
+    } catch (err: unknown) {
+      // Extrair mensagem de erro mais específica
+      let message = 'Não foi possível processar o pagamento. Contacte suporte'
+      let errorDetails: Record<string, unknown> = {}
+      
+      if (err instanceof Error) {
+        message = err.message
+        errorDetails = { errorMessage: err.message, errorName: err.name }
+      } else if (typeof err === 'object' && err !== null) {
+        // Tentar extrair mensagem de erro da resposta da API (Axios error)
+        const apiError = err as { 
+          response?: { 
+            data?: { 
+              error?: string
+              message?: string
+              debugId?: string
+              stripeError?: string
+            }
+            status?: number
+            statusText?: string
+          }
+          message?: string
+          code?: string
+        }
+        
+        if (apiError.response?.data?.error) {
+          message = apiError.response.data.error
+          errorDetails = {
+            status: apiError.response.status,
+            statusText: apiError.response.statusText,
+            error: apiError.response.data.error,
+            debugId: apiError.response.data.debugId,
+            stripeError: apiError.response.data.stripeError,
+            message: apiError.response.data.message,
+          }
+        } else if (apiError.response?.data?.message) {
+          message = apiError.response.data.message
+          errorDetails = {
+            status: apiError.response.status,
+            error: apiError.response.data.message,
+          }
+        } else if (apiError.message) {
+          message = apiError.message
+          errorDetails = { message: apiError.message, code: apiError.code }
+        } else if (apiError.response?.status) {
+          // Erro HTTP sem mensagem específica
+          if (apiError.response.status === 500) {
+            message = 'Erro no servidor. Por favor, tente novamente em alguns momentos.'
+          } else if (apiError.response.status === 503) {
+            message = 'Serviço temporariamente indisponível. Tente novamente em alguns momentos.'
+          } else if (apiError.response.status === 400) {
+            message = 'Dados inválidos. Verifique os dados e tente novamente.'
+          } else {
+            message = `Erro ${apiError.response.status}: ${apiError.response.statusText || 'Erro desconhecido'}`
+          }
+          errorDetails = {
+            status: apiError.response.status,
+            statusText: apiError.response.statusText,
+          }
+        }
+      }
+      
       setError(message)
+      
+      // Toast com mais informações se disponível
+      const toastDescription = errorDetails.debugId 
+        ? `ID de debug: ${errorDetails.debugId}. Se o problema persistir, contacte-nos.`
+        : 'Se o problema persistir, contacte-nos pelo email de suporte.'
+      
       toast.error(message, {
-        description: 'Se o problema persistir, contacte-nos pelo email de suporte.',
+        description: toastDescription,
+        duration: 8000,
       })
-      console.error('Payment error:', err)
+      
+      // Log detalhado para debugging
+      console.error('❌ Payment error:', {
+        error: err,
+        message,
+        details: errorDetails,
+        payload: {
+          itemsCount: items.length,
+          email: shippingAddress.email,
+          total,
+        },
+      })
     }
   }
 

@@ -14,6 +14,33 @@ const HTTP_URL_PATTERN = /^https?:\/\//i
 router.post('/', async (c) => {
   // Obter bindings do runtime Cloudflare de forma tipada
   const env = c.env as unknown as WorkerBindings
+  
+  // Validar Stripe key ANTES de qualquer processamento
+  if (!env.STRIPE_SECRET_KEY) {
+    console.error('❌ STRIPE_SECRET_KEY is missing from environment')
+    return c.json(
+      { 
+        error: 'Erro de configuração no servidor de pagamento',
+        debugId: 'missing_stripe_key',
+        message: 'Stripe secret key not configured'
+      },
+      500,
+    )
+  }
+
+  // Validar formato básico da chave Stripe
+  if (!env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+    console.error('❌ STRIPE_SECRET_KEY has invalid format:', env.STRIPE_SECRET_KEY.substring(0, 10) + '...')
+    return c.json(
+      { 
+        error: 'Erro de configuração no servidor de pagamento',
+        debugId: 'invalid_stripe_key_format',
+        message: 'Stripe secret key format is invalid'
+      },
+      500,
+    )
+  }
+
   const db = getDb({ DB: env.DB })
   const { products } = dbSchema
 
@@ -34,13 +61,43 @@ router.post('/', async (c) => {
       email: string
     }>()
 
+    console.log('📦 Checkout request received:', {
+      itemsCount: body?.items?.length || 0,
+      hasEmail: !!body?.email,
+      emailPreview: body?.email ? `${body.email.substring(0, 10)}...` : 'MISSING',
+      hasShippingAddress: !!body?.shippingAddress,
+      hasBillingAddress: !!body?.billingAddress,
+    })
+
     if (!body?.items?.length) {
-      return c.json({ error: 'Cart is empty' }, 400)
+      console.error('❌ Validation failed: Cart is empty')
+      return c.json({ 
+        error: 'Carrinho vazio. Adicione produtos antes de pagar',
+        debugId: 'empty_cart'
+      }, 400)
     }
 
     if (!body.email) {
-      return c.json({ error: 'Email is required' }, 400)
+      console.error('❌ Validation failed: Email is missing')
+      return c.json({ 
+        error: 'Email é obrigatório',
+        debugId: 'missing_email'
+      }, 400)
     }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const trimmedEmail = body.email.trim()
+    if (!emailRegex.test(trimmedEmail)) {
+      console.error('❌ Validation failed: Invalid email format', { email: trimmedEmail })
+      return c.json({ 
+        error: 'Formato de email inválido. Use um email válido (ex: seu.email@dominio.com)',
+        debugId: 'invalid_email_format'
+      }, 400)
+    }
+
+    // Normalizar email (trim e lowercase)
+    body.email = trimmedEmail.toLowerCase()
 
     const normalizedItems = body.items
       .map((item) => ({
@@ -50,12 +107,33 @@ router.post('/', async (c) => {
       .filter((item) => Boolean(item.productId)) as Array<{ productId: string; quantity: number }>
 
     if (!normalizedItems.length) {
-      return c.json({ error: 'No valid products provided' }, 400)
+      console.error('❌ Validation failed: No valid products after normalization', {
+        originalItems: body.items,
+        normalizedItems,
+      })
+      return c.json({ 
+        error: 'Nenhum produto válido encontrado. Verifique os produtos no carrinho',
+        debugId: 'no_valid_products'
+      }, 400)
     }
 
+    console.log('✅ Basic validations passed:', {
+      email: body.email,
+      itemsCount: normalizedItems.length,
+      productIds: normalizedItems.map(i => i.productId),
+    })
+
     const productIds = normalizedItems.map((item) => item.productId)
+    console.log('🔍 Looking up products in database:', { productIds })
+    
     const dbProducts = await db.query.products.findMany({
       where: inArray(products.id, productIds),
+    })
+
+    console.log('📦 Products found in database:', {
+      requested: productIds.length,
+      found: dbProducts.length,
+      foundIds: dbProducts.map(p => p.id),
     })
 
     const baseUrl = resolveImageBaseUrl(c.req.url, env)
@@ -63,7 +141,12 @@ router.post('/', async (c) => {
     const missing = normalizedItems.filter((item) => !catalog.has(item.productId))
 
     if (missing.length) {
-      return c.json({ error: `Products not available: ${missing.map((m) => m.productId).join(', ')}` }, 404)
+      console.error('❌ Products not found in database:', { missing: missing.map(m => m.productId) })
+      return c.json({ 
+        error: `Produtos não disponíveis: ${missing.map((m) => m.productId).join(', ')}. Por favor, atualize o carrinho.`,
+        debugId: 'products_not_found',
+        missingProducts: missing.map(m => m.productId)
+      }, 404)
     }
 
     const buildImagesForStripe = (product: ReturnType<typeof buildProductResponse>) => {
@@ -92,17 +175,33 @@ router.post('/', async (c) => {
         throw new Error(`Invalid price for product ${product.id}`)
       }
       
+      // Validar e truncar nome do produto (máximo 500 caracteres para Stripe)
+      const productName = (product.name || 'Produto sem nome').substring(0, 500)
+      
+      // Validar e truncar descrição (máximo 500 caracteres para Stripe)
+      const productDescription = (product.shortDescription || product.description || '')
+        .substring(0, 500)
+      
+      // Validar que unit_amount está dentro dos limites do Stripe (mínimo 1 cent, máximo 99999999)
+      const unitAmountCents = Math.round(unitPrice * 100)
+      if (unitAmountCents < 1) {
+        throw new Error(`Price too low for product ${product.id}: ${unitPrice}`)
+      }
+      if (unitAmountCents > 99999999) {
+        throw new Error(`Price too high for product ${product.id}: ${unitPrice}`)
+      }
+      
       return {
         price_data: {
           currency: 'eur',
           product_data: {
-            name: product.name,
-            description: product.shortDescription || product.description,
+            name: productName,
+            description: productDescription || undefined,
             images: buildImagesForStripe(product),
           },
-          unit_amount: Math.round(unitPrice * 100),
+          unit_amount: unitAmountCents,
         },
-        quantity,
+        quantity: Math.max(1, Math.min(99, quantity)), // Garantir quantidade entre 1 e 99
       }
     })
 
@@ -129,8 +228,62 @@ router.post('/', async (c) => {
       return c.json({ error: 'Invalid order total calculation' }, 400)
     }
 
-    const origin = c.req.header('origin') || 'http://localhost:5173'
-    const stripe = getStripe(env)
+    // Capturar origin de múltiplas fontes para garantir compatibilidade
+    let origin = c.req.header('origin')
+    
+    if (!origin) {
+      const referer = c.req.header('referer')
+      if (referer) {
+        try {
+          const refererUrl = new URL(referer)
+          origin = `${refererUrl.protocol}//${refererUrl.host}`
+        } catch {
+          // Ignorar erro
+        }
+      }
+    }
+    
+    if (!origin) {
+      const host = c.req.header('host')
+      if (host) {
+        origin = `https://${host}`
+      }
+    }
+    
+    // Fallback para produção
+    if (!origin || !origin.startsWith('http')) {
+      origin = 'https://leiasabores.pt'
+    }
+    
+    // Remover trailing slash se existir
+    origin = origin.replace(/\/$/, '')
+    
+    // Validar que origin é uma URL válida
+    try {
+      new URL(origin)
+    } catch {
+      console.warn('Invalid origin detected, using default:', origin)
+      origin = 'https://leiasabores.pt'
+    }
+    
+    console.log('Using origin for checkout URLs:', origin)
+    
+    // Inicializar Stripe com validação
+    let stripe: ReturnType<typeof getStripe>
+    try {
+      stripe = getStripe(env)
+    } catch (stripeInitError) {
+      const errorMessage = stripeInitError instanceof Error ? stripeInitError.message : 'Unknown error'
+      console.error('❌ Failed to initialize Stripe:', errorMessage)
+      return c.json(
+        { 
+          error: 'Erro de configuração no servidor de pagamento',
+          debugId: 'stripe_init_failed',
+          message: errorMessage
+        },
+        500,
+      )
+    }
 
     let shippingAddressJson = '{}'
     let billingAddressJson = '{}'
@@ -145,81 +298,226 @@ router.post('/', async (c) => {
       console.warn('Failed to serialize billing address metadata', error)
     }
 
-    // Múltiplos métodos de pagamento para Portugal/Europa
-    const paymentMethods = [
-      'card',      // Cartão de crédito/débito
+    // Métodos de pagamento suportados para Portugal/Europa
+    // Nota: Alguns métodos requerem configuração adicional na conta Stripe
+    // Começamos com métodos básicos que funcionam universalmente
+    const paymentMethods: StripeType.Checkout.SessionCreateParams.PaymentMethodType[] = [
+      'card',      // Cartão de crédito/débito - sempre disponível
+    ]
+
+    // Adicionar métodos regionais apenas se a conta Stripe os suportar
+    // Estes métodos podem falhar se não estiverem habilitados na conta
+    const optionalPaymentMethods: StripeType.Checkout.SessionCreateParams.PaymentMethodType[] = [
       'ideal',     // iDEAL (Holanda)
       'bancontact', // Bancontact (Bélgica)
       'eps',       // EPS (Áustria)
       'giropay',   // giropay (Alemanha)
       'p24',       // Przelewy24 (Polónia)
-      'klarna',    // Klarna (Suécia/Finlândia)
-      'paypal',    // PayPal
     ]
+
+    // Adicionar métodos opcionais (se falharem, o Stripe ignora silenciosamente)
+    // Nota: PayPal e Klarna podem requerer configuração adicional
+    // paymentMethods.push(...optionalPaymentMethods)
 
     console.log('Creating Stripe session with:', {
       lineItemsCount: lineItems.length,
       total,
       email: body.email,
+      paymentMethods: paymentMethods,
       paymentMethodsCount: paymentMethods.length,
+      origin,
+      stripeKeyPreview: env.STRIPE_SECRET_KEY ? `${env.STRIPE_SECRET_KEY.substring(0, 10)}...` : 'MISSING',
     })
 
-    // @ts-expect-error - Stripe types are overly restrictive, but these payment methods are valid
-    session = await stripe.checkout.sessions.create({
-      payment_method_types: paymentMethods,
-      mode: 'payment',
-      billing_address_collection: 'auto',
-      allow_promotion_codes: true,
-      phone_number_collection: {
-        enabled: true,
-      },
-      shipping_address_collection: {
-        allowed_countries: ['PT', 'ES', 'BE', 'NL', 'DE', 'AT', 'PL', 'FR', 'IT', 'SE', 'FI', 'DK', 'NO'],
-      },
-      line_items: lineItems,
-      customer_email: body.email,
-      success_url: `${origin}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/carrinho`,
-      metadata: {
-        userId: body.email,
-        subtotal: subtotal.toString(),
-        tax: tax.toString(),
-        shipping: shipping.toString(),
-        total: total.toString(),
-        shippingAddress: shippingAddressJson,
-        billingAddress: billingAddressJson,
-        items: JSON.stringify(normalizedItems),
-        timestamp: new Date().toISOString(),
-      },
-      // Configurações de segurança e conformidade
-      locale: 'pt',
-      consent_collection: {
-        promotions: 'auto',
-        terms_of_service: 'auto',
-      },
-    } as StripeType.Checkout.SessionCreateParams)
+    // Validar line items antes de criar sessão
+    if (!lineItems || lineItems.length === 0) {
+      console.error('❌ No line items to process')
+      return c.json({ error: 'No valid items to process' }, 400)
+    }
 
-    console.log(`✅ Checkout session created: ${session.id} | Total: €${total} | Email: ${body.email}`)
-    
-    return c.json({
-      checkoutUrl: session.url,
-      sessionId: session.id,
-    })
+    // Validar URLs de sucesso/cancelamento
+    if (!origin || !origin.startsWith('http')) {
+      console.error('❌ Invalid origin:', origin)
+      return c.json({ error: 'Invalid origin URL' }, 400)
+    }
+
+    try {
+      // Validar que todos os line items têm dados válidos
+      const validatedLineItems = lineItems.map((item, index) => {
+        if (!item.price_data || !item.price_data.unit_amount || item.price_data.unit_amount <= 0) {
+          console.error(`❌ Invalid line item ${index}: unit_amount is invalid`, {
+            unit_amount: item.price_data?.unit_amount,
+            item,
+          })
+          throw new Error(`Item ${index + 1}: Preço inválido (${item.price_data?.unit_amount || 'undefined'})`)
+        }
+        if (!item.price_data.currency || item.price_data.currency !== 'eur') {
+          console.error(`❌ Invalid line item ${index}: currency is invalid`, {
+            currency: item.price_data?.currency,
+            item,
+          })
+          throw new Error(`Item ${index + 1}: Moeda inválida (deve ser 'eur')`)
+        }
+        if (!item.quantity || item.quantity <= 0) {
+          console.error(`❌ Invalid line item ${index}: quantity is invalid`, {
+            quantity: item.quantity,
+            item,
+          })
+          throw new Error(`Item ${index + 1}: Quantidade inválida (${item.quantity || 'undefined'})`)
+        }
+        return item
+      })
+      
+      console.log('✅ Line items validated:', {
+        count: validatedLineItems.length,
+        totalAmount: validatedLineItems.reduce((sum, item) => sum + (item.price_data.unit_amount * item.quantity), 0) / 100,
+      })
+
+      // Criar sessão Stripe com validação completa
+      const sessionParams: StripeType.Checkout.SessionCreateParams = {
+        payment_method_types: paymentMethods,
+        mode: 'payment',
+        billing_address_collection: 'auto',
+        allow_promotion_codes: true,
+        phone_number_collection: {
+          enabled: true,
+        },
+        shipping_address_collection: {
+          allowed_countries: ['PT', 'ES', 'BE', 'NL', 'DE', 'AT', 'PL', 'FR', 'IT', 'SE', 'FI', 'DK', 'NO'],
+        },
+        line_items: validatedLineItems,
+        customer_email: body.email,
+        success_url: `${origin}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/carrinho`,
+        metadata: {
+          userId: body.email,
+          subtotal: subtotal.toString(),
+          tax: tax.toString(),
+          shipping: shipping.toString(),
+          total: total.toString(),
+          shippingAddress: shippingAddressJson,
+          billingAddress: billingAddressJson,
+          items: JSON.stringify(normalizedItems),
+          timestamp: new Date().toISOString(),
+        },
+        locale: 'pt',
+        consent_collection: {
+          promotions: 'auto',
+          terms_of_service: 'auto',
+        },
+      }
+
+      console.log('Stripe session params:', {
+        payment_method_types: sessionParams.payment_method_types,
+        line_items_count: sessionParams.line_items?.length,
+        mode: sessionParams.mode,
+        customer_email: sessionParams.customer_email,
+      })
+
+      session = await stripe.checkout.sessions.create(sessionParams)
+
+      if (!session || !session.id) {
+        console.error('❌ Stripe session created but missing ID')
+        return c.json({ error: 'Failed to create checkout session' }, 500)
+      }
+
+      if (!session.url) {
+        console.error('❌ Stripe session created but missing URL:', session.id)
+        return c.json({ error: 'Failed to get checkout URL' }, 500)
+      }
+
+      console.log(`✅ Checkout session created: ${session.id} | Total: €${total} | Email: ${body.email}`)
+      
+      return c.json({
+        checkoutUrl: session.url,
+        sessionId: session.id,
+      })
+    } catch (stripeError: unknown) {
+      // Capturar e logar detalhes completos do erro Stripe
+      const stripeErrorMessage = stripeError instanceof Error ? stripeError.message : 'Unknown Stripe error'
+      const stripeErrorType = stripeError instanceof Error ? stripeError.constructor.name : 'UnknownError'
+      const stripeErrorObj = stripeError as any
+      
+      console.error('❌ Stripe API error during session creation:', {
+        errorType: stripeErrorType,
+        message: stripeErrorMessage,
+        code: stripeErrorObj?.code,
+        statusCode: stripeErrorObj?.statusCode,
+        stripeType: stripeErrorObj?.type,
+        decline_code: stripeErrorObj?.decline_code,
+        param: stripeErrorObj?.param,
+        email: body.email,
+        lineItemsCount: lineItems.length,
+        total,
+        rawError: JSON.stringify(stripeErrorObj, Object.getOwnPropertyNames(stripeErrorObj)).substring(0, 500),
+      })
+      
+      // Se for erro de método de pagamento inválido, tentar apenas com 'card'
+      if (
+        stripeErrorObj?.code === 'parameter_invalid_integer' ||
+        stripeErrorObj?.code === 'parameter_invalid_string' ||
+        stripeErrorObj?.param === 'payment_method_types' ||
+        stripeErrorMessage.includes('payment_method')
+      ) {
+        console.warn('⚠️ Payment method error detected, retrying with card only...')
+        try {
+          session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            mode: 'payment',
+            billing_address_collection: 'auto',
+            allow_promotion_codes: true,
+            phone_number_collection: { enabled: true },
+            shipping_address_collection: {
+              allowed_countries: ['PT', 'ES', 'BE', 'NL', 'DE', 'AT', 'PL', 'FR', 'IT', 'SE', 'FI', 'DK', 'NO'],
+            },
+            line_items: lineItems,
+            customer_email: body.email,
+            success_url: `${origin}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${origin}/carrinho`,
+            metadata: {
+              userId: body.email,
+              subtotal: subtotal.toString(),
+              tax: tax.toString(),
+              shipping: shipping.toString(),
+              total: total.toString(),
+              shippingAddress: shippingAddressJson,
+              billingAddress: billingAddressJson,
+              items: JSON.stringify(normalizedItems),
+              timestamp: new Date().toISOString(),
+            },
+            locale: 'pt',
+            consent_collection: {
+              promotions: 'auto',
+              terms_of_service: 'auto',
+            },
+          })
+          console.log('✅ Retry with card only succeeded:', session.id)
+        } catch (retryError) {
+          console.error('❌ Retry with card only also failed:', retryError)
+          throw stripeError // Re-throw erro original
+        }
+      } else {
+        throw stripeError // Re-throw para tratamento no catch externo
+      }
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorType = error instanceof Error ? error.constructor.name : 'UnknownError'
     const stripeErrorCode = error instanceof Error && 'code' in error ? (error as any).code : undefined
     const stripeStatusCode = error instanceof Error && 'status' in error ? (error as any).status : undefined
+    const stripeType = (error as any)?.type
     const fullError = error instanceof Error ? error : new Error(String(error))
     
-    console.error(`❌ Stripe checkout error [${errorType}]: ${errorMessage}`)
+    console.error(`❌ Checkout error [${errorType}]: ${errorMessage}`)
     console.error('Error details:', {
+      errorType,
       stripeErrorCode,
+      stripeType,
       stripeStatusCode,
       message: errorMessage,
       email: body?.email,
       itemsCount: body?.items?.length,
-      lineItemsCount: (error as any)?.lineItems?.length,
+      hasBody: !!body,
       fullStack: fullError.stack,
       timestamp: new Date().toISOString(),
     })
@@ -227,32 +525,52 @@ router.post('/', async (c) => {
     // Log o objeto de erro completo para melhor debugging
     if (error instanceof Error && Object.keys(error).length > 0) {
       console.error('Additional error properties:', Object.entries(error).reduce((acc, [key, value]) => {
-        acc[key] = String(value).substring(0, 100)
+        try {
+          acc[key] = String(value).substring(0, 200)
+        } catch {
+          acc[key] = '[unserializable]'
+        }
         return acc
       }, {} as Record<string, string>))
     }
     
-    // Mensagens de erro personalizadas
+    // Mensagens de erro personalizadas baseadas no tipo de erro
     let userMessage = 'Não foi possível processar o pagamento'
-    if (errorMessage.includes('api_key') || errorMessage.includes('STRIPE_SECRET_KEY')) {
+    let httpStatus = 500
+    
+    if (errorMessage.includes('api_key') || errorMessage.includes('STRIPE_SECRET_KEY') || errorMessage.includes('Missing STRIPE_SECRET_KEY')) {
       userMessage = 'Erro de configuração no servidor de pagamento'
-    } else if (errorMessage.includes('network')) {
+      httpStatus = 500
+    } else if (errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ETIMEDOUT')) {
       userMessage = 'Erro de conectividade. Tente novamente em alguns momentos'
-    } else if (errorMessage.includes('invalid_request')) {
-      userMessage = 'Dados de pagamento inválidos'
-    } else if (stripeErrorCode === 'ERR_NETWORK') {
+      httpStatus = 503
+    } else if (errorMessage.includes('invalid_request') || stripeErrorCode === 'parameter_invalid_empty' || stripeErrorCode === 'parameter_invalid_integer') {
+      userMessage = 'Dados de pagamento inválidos. Verifique os dados e tente novamente'
+      httpStatus = 400
+    } else if (stripeErrorCode === 'ERR_NETWORK' || stripeStatusCode === 0) {
       userMessage = 'Erro de conectividade com servidor de pagamento'
+      httpStatus = 503
+    } else if (stripeType === 'StripeAuthenticationError' || stripeErrorCode === 'api_key_expired' || stripeErrorCode === 'invalid_api_key') {
+      userMessage = 'Erro de configuração no servidor de pagamento'
+      httpStatus = 500
+    } else if (stripeType === 'StripeInvalidRequestError') {
+      userMessage = 'Dados de pagamento inválidos'
+      httpStatus = 400
+    } else if (stripeType === 'StripeAPIError' || stripeType === 'StripeConnectionError') {
+      userMessage = 'Erro temporário no servidor de pagamento. Tente novamente em alguns momentos'
+      httpStatus = 503
     }
     
     return c.json(
       { 
         error: userMessage, 
-        debugId: session?.id || 'unknown',
+        debugId: session?.id || crypto.randomUUID().substring(0, 8),
         stripeError: stripeErrorCode || undefined,
-        message: errorMessage,
+        stripeType: stripeType || undefined,
+        message: env.ENVIRONMENT === 'development' ? errorMessage : undefined,
         type: errorType
       },
-      500,
+      httpStatus,
     )
   } finally {
     // Cleanup if needed
