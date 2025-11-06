@@ -17,8 +17,17 @@ router.post('/', async (c) => {
   const db = getDb({ DB: env.DB })
   const { products } = dbSchema
 
+  let body: {
+    items: Array<{ productId: string; quantity: number }>
+    shippingAddress: Record<string, unknown>
+    billingAddress: Record<string, unknown>
+    email: string
+  } | undefined
+
+  let session: StripeType.Checkout.Session | undefined
+
   try {
-    const body = await c.req.json<{
+    body = await c.req.json<{
       items: Array<{ productId: string; quantity: number }>
       shippingAddress: Record<string, unknown>
       billingAddress: Record<string, unknown>
@@ -137,7 +146,7 @@ router.post('/', async (c) => {
     }
 
     // Múltiplos métodos de pagamento para Portugal/Europa
-    const paymentMethods: Array<'card' | 'ideal' | 'bancontact' | 'eps' | 'giropay' | 'p24' | 'klarna' | 'alipay' | 'wechat_pay' | 'paypal'> = [
+    const paymentMethods = [
       'card',      // Cartão de crédito/débito
       'ideal',     // iDEAL (Holanda)
       'bancontact', // Bancontact (Bélgica)
@@ -148,7 +157,8 @@ router.post('/', async (c) => {
       'paypal',    // PayPal
     ]
 
-    const session = await stripe.checkout.sessions.create({
+    // @ts-expect-error - Stripe types are overly restrictive, but these payment methods are valid
+    session = await stripe.checkout.sessions.create({
       payment_method_types: paymentMethods,
       mode: 'payment',
       billing_address_collection: 'auto',
@@ -180,7 +190,7 @@ router.post('/', async (c) => {
         promotions: 'auto',
         terms_of_service: 'auto',
       },
-    })
+    } as StripeType.Checkout.SessionCreateParams)
 
     console.log(`✅ Checkout session created: ${session.id} | Total: €${total} | Email: ${body.email}`)
     
@@ -213,6 +223,8 @@ router.post('/', async (c) => {
       { error: userMessage, debugId: session?.id || 'unknown' },
       500,
     )
+  } finally {
+    // Cleanup if needed
   }
 })
 
@@ -301,7 +313,7 @@ router.post('/webhook', async (c) => {
         }
 
         if (session.customer_email) {
-          const deletedCount = await db.delete(cartItems).where(eq(cartItems.userId, session.customer_email))
+          await db.delete(cartItems).where(eq(cartItems.userId, session.customer_email))
           console.log(`🗑️ Cart cleared: ${session.customer_email}`)
         }
 

@@ -85,7 +85,7 @@ api.interceptors.request.use((config) => {
   // Log para debug
   console.log('[API Request]', {
     method: config.method?.toUpperCase(),
-    url: config.baseURL + config.url,
+    url: (config.baseURL || '') + (config.url || ''),
     data: config.data
   })
   
@@ -115,12 +115,12 @@ api.interceptors.response.use(
       
       if (status === 405) {
         console.error('[API Error] Method Not Allowed (405):', {
-          url: error.config?.baseURL + error.config?.url,
+          url: (error.config?.baseURL || '') + (error.config?.url || ''),
           method: error.config?.method,
           data: error.config?.data,
           headers: error.config?.headers
         })
-        return Promise.reject(new Error(`Método não permitido (405). URL: ${error.config?.baseURL}${error.config?.url}, Método: ${error.config?.method}`))
+        return Promise.reject(new Error(`Método não permitido (405). URL: ${error.config?.baseURL || ''}${error.config?.url || ''}, Método: ${error.config?.method}`))
       }
       
       return Promise.reject(new Error(message || `Erro ${status}: ${error.message}`))
