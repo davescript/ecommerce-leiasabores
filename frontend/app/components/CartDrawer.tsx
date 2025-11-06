@@ -1,7 +1,7 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
-import { Sheet, SheetTrigger, SheetContent, SheetFooter } from '@components/ui/sheet'
+import { Sheet, SheetContent, SheetFooter } from '@components/ui/sheet'
 import { Button } from '@components/ui/button'
 import { ScrollArea } from '@components/ui/scroll-area'
 import { Separator } from '@components/ui/separator'
@@ -14,11 +14,11 @@ interface CartDrawerProps {
 
 export function CartDrawer({ children }: CartDrawerProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
   const { items, subtotal, tax, shipping, total, removeItem, updateQuantity } = useCart()
 
   const closeSheet = () => {
-    const closeButton = contentRef.current?.querySelector('button[aria-label="Fechar"]') as HTMLButtonElement
-    closeButton?.click()
+    setOpen(false)
   }
 
   const emptyState = (
@@ -35,11 +35,12 @@ export function CartDrawer({ children }: CartDrawerProps) {
   )
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <div>{children}</div>
-      </SheetTrigger>
-      <SheetContent ref={contentRef}>
+    <>
+      <div onClick={() => setOpen(true)}>
+        {children}
+      </div>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent ref={contentRef}>
         <div className="flex h-full flex-col">
           {items.length === 0 ? (
             emptyState
@@ -130,7 +131,8 @@ export function CartDrawer({ children }: CartDrawerProps) {
             </>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
