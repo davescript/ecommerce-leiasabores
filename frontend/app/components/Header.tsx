@@ -5,6 +5,7 @@ import { Search, ShoppingCart, Menu, X, PhoneCall } from 'lucide-react'
 import { useCartStore } from '@hooks/useCart'
 import type { CartItem } from '@types'
 import { CartDrawer } from '@components/CartDrawer'
+import { CategorySubmenu } from '@components/CategorySubmenu'
 import { Input } from '@components/ui/input'
 
 export function Header() {
@@ -50,8 +51,15 @@ export function Header() {
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium text-secondary md:flex">
-            {menuLinks.map(link => (
+          <nav className="hidden items-center gap-1 text-sm font-medium text-secondary md:flex">
+            <Link
+              to="/"
+              className="rounded-full px-3 py-2 transition-colors hover:bg-primary/5 hover:text-primary"
+            >
+              Início
+            </Link>
+            <CategorySubmenu />
+            {menuLinks.filter(link => link.href !== '/').map(link => (
               <Link
                 key={link.href}
                 to={link.href}

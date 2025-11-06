@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy, useEffect } from 'react'
 import { Header } from '@components/Header'
 import { Footer } from '@components/Footer'
+import { AnnouncementBar } from '@components/AnnouncementBar'
 import './styles/globals.css'
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })))
@@ -28,6 +29,7 @@ export function App() {
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen">
+        <AnnouncementBar />
         <Header />
         <main className="flex-1">
           <Suspense fallback={<div className="py-20 text-center text-sm text-gray-500">A carregar…</div>}>

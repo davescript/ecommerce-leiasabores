@@ -2,8 +2,10 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Sparkles, Calendar, Heart, Truck, Shield, Star } from 'lucide-react'
+import { useEffect } from 'react'
 import { Button } from '@components/Button'
 import { ProductCard } from '@components/ProductCard'
+import { HotDealsSection } from '@components/HotDealsSection'
 import { Skeleton } from '@components/ui/skeleton'
 import { useCart } from '@hooks/useCart'
 import { useSEO } from '@hooks/useSEO'
@@ -74,6 +76,41 @@ export function Home() {
     title: 'Leia Sabores · Personalize cada celebração',
     description: 'Topos de bolo personalizados, doces artesanais e decoração com entrega express em Portugal.',
   })
+
+  // Add JSON-LD structured data for SEO
+  useEffect(() => {
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Leia Sabores',
+      url: 'https://leiasabores.pt',
+      logo: 'https://leiasabores.pt/logo.png',
+      description: 'Topos de bolo personalizados, doces artesanais e decoração com entrega express em Portugal.',
+      sameAs: [
+        'https://www.instagram.com/leiasabores',
+        'https://www.facebook.com/leiasabores'
+      ],
+      contactPoint: {
+        '@type': 'ContactPoint',
+        telephone: '+351-910-000-000',
+        contactType: 'Customer Service'
+      },
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Lisboa',
+        addressCountry: 'PT'
+      }
+    }
+
+    const script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.text = JSON.stringify(schema)
+    document.head.appendChild(script)
+
+    return () => {
+      document.head.removeChild(script)
+    }
+  }, [])
 
   const { data: featured, isLoading } = useQuery({
     queryKey: ['products', 'featured'],
@@ -194,6 +231,8 @@ export function Home() {
           </div>
         </div>
       </section>
+
+      <HotDealsSection />
 
       <section className="bg-light py-16">
         <div className="container-xl space-y-10">
