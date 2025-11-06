@@ -52,7 +52,8 @@ const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 )
 SheetFooter.displayName = 'SheetFooter'
 
+const SheetTrigger = SheetPrimitive.Trigger
 const SheetTitle = SheetPrimitive.Title
 const SheetDescription = SheetPrimitive.Description
 
-export { Sheet, SheetClose, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription }
+export { Sheet, SheetClose, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription, SheetTrigger }

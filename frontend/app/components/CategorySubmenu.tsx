@@ -45,50 +45,52 @@ export function CategorySubmenu() {
 
       <AnimatePresence>
         {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 md:hidden"
-              onClick={() => setIsOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="absolute left-0 right-0 z-50 mt-2 grid w-80 max-w-sm grid-cols-1 gap-2 rounded-2xl border border-white/40 bg-white/90 p-4 shadow-2xl backdrop-blur-xl md:w-96"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {displayCategories.map((category: any) => (
-                <Link
-                  key={category.id || category.slug}
-                  to={`/catalogo?categoria=${category.slug}`}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-start gap-3 rounded-xl border border-transparent bg-light/50 p-3 transition hover:border-primary/20 hover:bg-primary/5"
-                >
-                  <div className="mt-1 text-primary">
-                    {categoryIcons[category.slug as string] || <Sparkles className="h-5 w-5" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-secondary">{category.name}</p>
-                    <p className="text-xs text-gray-500">{category.description}</p>
-                  </div>
-                </Link>
-              ))}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 md:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="absolute left-0 right-0 z-50 mt-2 grid w-80 max-w-sm grid-cols-1 gap-2 rounded-2xl border border-white/40 bg-white/90 p-4 shadow-2xl backdrop-blur-xl md:w-96"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {displayCategories.map((category: any) => (
+              <Link
+                key={category.id || category.slug}
+                to={`/catalogo?categoria=${category.slug}`}
+                onClick={() => setIsOpen(false)}
+                className="flex items-start gap-3 rounded-xl border border-transparent bg-light/50 p-3 transition hover:border-primary/20 hover:bg-primary/5"
+              >
+                <div className="mt-1 text-primary">
+                  {categoryIcons[category.slug as string] || <Sparkles className="h-5 w-5" />}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-secondary">{category.name}</p>
+                  <p className="text-xs text-gray-500">{category.description}</p>
+                </div>
+              </Link>
+            ))}
 
-              <div className="mt-2 border-t border-gray-100 pt-3">
-                <Link
-                  to="/catalogo"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-center rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/20"
-                >
-                  Ver todas as categorias →
-                </Link>
-              </div>
-            </motion.div>
-          </>
+            <div className="mt-2 border-t border-gray-100 pt-3">
+              <Link
+                to="/catalogo"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center justify-center rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/20"
+              >
+                Ver todas as categorias →
+              </Link>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -18,7 +18,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../dist/public',
+    outDir: path.resolve(__dirname, '../dist/public'),
     emptyOutDir: false,
     minify: 'terser',
     sourcemap: false,

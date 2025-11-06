@@ -52,8 +52,8 @@ const fallbackProducts: Product[] = [
 ]
 
 const categories = [
-  { id: '1', name: 'Topos Personalizados', slug: 'topos-de-bolo', image: 'https://api.leiasabores.pt/api/r2/topos-de-bolo/minie-nicole.jpeg', description: 'Produção em 24h' },
-  { id: '2', name: 'Bolos Temáticos', slug: 'bolos-tematicos', image: 'https://api.leiasabores.pt/api/r2/topos-de-bolo/topo-princesas.jpeg', description: 'Sabores exclusivos' },
+  { id: '1', name: 'Topos Personalizados', slug: 'topos-de-bolo', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80', description: 'Produção em 24h' },
+  { id: '2', name: 'Bolos Temáticos', slug: 'bolos-tematicos', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80', description: 'Sabores exclusivos' },
   { id: '3', name: 'Doces & Mesa', slug: 'mesa-doce', image: 'https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?auto=format&fit=crop&w=800&q=80', description: 'Macarons, brigadeiros' },
   { id: '4', name: 'Kits Completo', slug: 'kits', image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80', description: 'Tudo para a festa' },
 ]
