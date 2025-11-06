@@ -1,11 +1,10 @@
-// Tipos mínimos locais para evitar dependência de tipos externos
-type FunctionContext = {
-  request: Request
-}
-
-export const onRequest = async (ctx: FunctionContext) => {
-  const { request } = ctx
+// Cloudflare Pages Functions handler
+// @ts-ignore - PagesFunction type is provided by Cloudflare runtime
+export const onRequest = async ({ request }: { request: Request }) => {
   const url = new URL(request.url)
+  
+  // Log para debug
+  console.log(`[Proxy] ${request.method} ${url.pathname}`)
 
   const corsHeaders: Record<string, string> = {
     'Access-Control-Allow-Origin': url.origin,
@@ -20,9 +19,12 @@ export const onRequest = async (ctx: FunctionContext) => {
   }
 
   // Proxy para a API pública no subdomínio
-  const upstreamBase = 'https://api.leiasabores.pt/api'
+  const upstreamBase = 'https://api.leiasabores.pt'
+  // Remover /api do pathname e reconstruir
   const path = url.pathname.replace(/^\/api/, '')
-  const target = upstreamBase + path + (url.search || '')
+  const target = `${upstreamBase}/api${path}${url.search || ''}`
+  
+  console.log(`[Proxy] Target: ${target}, Method: ${request.method}`)
 
   // Preparar headers para o upstream, removendo headers que não devem ser reenviados
   const upstreamHeaders = new Headers()
@@ -52,7 +54,11 @@ export const onRequest = async (ctx: FunctionContext) => {
   }
 
   try {
+    console.log(`[Proxy] Fetching: ${target} with method ${init.method}`)
     const resp = await fetch(target, init)
+    
+    console.log(`[Proxy] Response status: ${resp.status} ${resp.statusText}`)
+    
     const headers = new Headers(resp.headers)
     
     // Garantir cabeçalhos CORS para o browser
@@ -63,15 +69,26 @@ export const onRequest = async (ctx: FunctionContext) => {
       headers.set('Content-Type', resp.headers.get('content-type')!)
     }
 
-    return new Response(resp.body, { 
+    // Clonar o body para poder ler e retornar
+    const body = await resp.clone().arrayBuffer()
+    
+    return new Response(body, { 
       status: resp.status, 
       statusText: resp.statusText,
       headers 
     })
   } catch (error) {
-    console.error('Proxy error:', error)
+    console.error('[Proxy] Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[Proxy] Error details:', { target, method: init.method, errorMessage })
+    
     return new Response(
-      JSON.stringify({ error: 'Failed to proxy request', message: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ 
+        error: 'Failed to proxy request', 
+        message: errorMessage,
+        target,
+        method: init.method
+      }),
       { 
         status: 502,
         headers: {
