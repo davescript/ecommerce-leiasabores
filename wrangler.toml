@@ -33,6 +33,9 @@ ENVIRONMENT = "development"
 ALLOWED_ORIGINS = "https://leiasabores.pt, https://www.leiasabores.pt, https://leiasabores.pages.dev, http://localhost:5173"
 ADMIN_SEED_TOKEN = "seed-topos-20251105"
 
+# Secrets (will be injected by GitHub Actions or set via `wrangler secret put`)
+# Note: In local development, these are read from .env file
+
 # -----------------------------
 # ✅ Ambiente de produção
 # -----------------------------
@@ -52,6 +55,8 @@ bucket_name = "leiasabores-r2"
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://leiasabores.pt, https://www.leiasabores.pt, https://leiasabores.pages.dev"
 ADMIN_SEED_TOKEN = "seed-topos-20251105"
+
+# Production secrets (will be injected by GitHub Actions)
 
 # -----------------------------
 # ✅ Cloudflare Pages (FRONTEND)
