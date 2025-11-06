@@ -201,9 +201,14 @@ router.post('/', async (c) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorType = error instanceof Error ? error.constructor.name : 'UnknownError'
+    const stripeErrorCode = error instanceof Error && 'code' in error ? (error as any).code : undefined
+    const stripeStatusCode = error instanceof Error && 'status' in error ? (error as any).status : undefined
     
     console.error(`❌ Stripe checkout error [${errorType}]: ${errorMessage}`)
-    console.error('Request details:', {
+    console.error('Error details:', {
+      stripeErrorCode,
+      stripeStatusCode,
+      message: errorMessage,
       email: body?.email,
       itemsCount: body?.items?.length,
       timestamp: new Date().toISOString(),
@@ -211,16 +216,22 @@ router.post('/', async (c) => {
     
     // Mensagens de erro personalizadas
     let userMessage = 'Não foi possível processar o pagamento'
-    if (errorMessage.includes('api_key')) {
+    if (errorMessage.includes('api_key') || errorMessage.includes('STRIPE_SECRET_KEY')) {
       userMessage = 'Erro de configuração no servidor de pagamento'
     } else if (errorMessage.includes('network')) {
       userMessage = 'Erro de conectividade. Tente novamente em alguns momentos'
     } else if (errorMessage.includes('invalid_request')) {
       userMessage = 'Dados de pagamento inválidos'
+    } else if (stripeErrorCode === 'ERR_NETWORK') {
+      userMessage = 'Erro de conectividade com servidor de pagamento'
     }
     
     return c.json(
-      { error: userMessage, debugId: session?.id || 'unknown' },
+      { 
+        error: userMessage, 
+        debugId: session?.id || 'unknown',
+        stripeError: stripeErrorCode || undefined
+      },
       500,
     )
   } finally {
