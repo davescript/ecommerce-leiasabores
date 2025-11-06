@@ -51,6 +51,25 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Debug endpoint para verificar configurações
+app.get('/debug/config', (c) => {
+  const env = c.env as WorkerBindings
+  
+  // Verificar variáveis de ambiente críticas (sem expor valores sensíveis)
+  return c.json({
+    environment: env.ENVIRONMENT,
+    bindings: {
+      hasDB: !!env.DB,
+      hasR2: !!env.R2,
+      hasStripeKey: !!env.STRIPE_SECRET_KEY,
+      hasStripeWebhookSecret: !!env.STRIPE_WEBHOOK_SECRET,
+      hasJWTSecret: !!env.JWT_SECRET,
+      stripeKeyPreview: env.STRIPE_SECRET_KEY ? `${env.STRIPE_SECRET_KEY.substring(0, 10)}...` : 'MISSING',
+    },
+    timestamp: new Date().toISOString(),
+  })
+})
+
 // Seed endpoints BEFORE admin router (so they don't get caught by app.route('/api/admin'))
 // Seed de Categorias (proteção por token via ADMIN_SEED_TOKEN)
 app.post('/api/admin/seed-categories', async (c) => {

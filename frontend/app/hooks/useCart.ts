@@ -2,6 +2,14 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Cart, CartItem, Product } from '@types'
 
+// Valid UUID v4 pattern - used to validate product IDs
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Check if a product ID is valid (UUID format)
+const isValidProductId = (id: string): boolean => {
+  return UUID_PATTERN.test(id)
+}
+
 interface CartStore extends Cart {
   addItem: (product: Product, quantity: number) => void
   removeItem: (productId: string) => void
@@ -87,7 +95,20 @@ export const useCartStore = create<CartStore>()(
     {
       name: 'cart-storage',
       onRehydrateStorage: () => (state) => {
-        state?.calculateTotals()
+        if (state) {
+          // Migration: Remove invalid product IDs (from old placeholder data)
+          const validItems = state.items.filter((item) => isValidProductId(item.productId))
+          
+          if (validItems.length !== state.items.length) {
+            // Log removed items for debugging
+            const removedCount = state.items.length - validItems.length
+            console.warn(`[Cart Migration] Removed ${removedCount} invalid product ID(s) from cart`)
+            
+            state.items = validItems
+          }
+          
+          state.calculateTotals()
+        }
       },
     }
   )

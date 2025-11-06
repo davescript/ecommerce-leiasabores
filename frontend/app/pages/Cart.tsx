@@ -1,11 +1,18 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle } from 'lucide-react'
 import { Button } from '@components/Button'
 import { useCartStore } from '@hooks/useCart'
 import type { CartItem } from '@types'
 import { useSEO } from '@hooks/useSEO'
 import { formatPrice } from '@lib/utils'
+
+// Valid UUID v4 pattern - used to validate product IDs
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const isValidProductId = (id: string): boolean => {
+  return UUID_PATTERN.test(id)
+}
 
 const trustBadges = [
   { text: 'Entrega express em Portugal', icon: '🚚' },
@@ -17,6 +24,7 @@ export function Cart() {
   const items = useCartStore((state) => state.items)
   const removeItem = useCartStore((state) => state.removeItem)
   const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const clearCart = useCartStore((state) => state.clearCart)
   const subtotal = useCartStore((state) => state.subtotal)
   const tax = useCartStore((state) => state.tax)
   const shipping = useCartStore((state) => state.shipping)
@@ -26,6 +34,10 @@ export function Cart() {
     title: 'Carrinho · Leia Sabores',
     description: 'Revise os seus produtos personalizados antes de concluir a encomenda com pagamento seguro Stripe.',
   })
+
+  // Check for invalid product IDs
+  const invalidItems = items.filter((item) => !isValidProductId(item.productId))
+  const hasInvalidItems = invalidItems.length > 0
 
   if (items.length === 0) {
     return (
@@ -58,6 +70,32 @@ export function Cart() {
             Continuar a comprar
           </Link>
         </div>
+
+        {hasInvalidItems && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600"
+          >
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold mb-2">
+                Carrinho contém {invalidItems.length} produto(s) inválido(s) e não pode ser processado
+              </p>
+              <p className="text-xs mb-3">
+                IDs inválidos: {invalidItems.map((item) => item.productId).join(', ')}
+              </p>
+              <Button
+                onClick={() => clearCart()}
+                size="sm"
+                variant="ghost"
+                className="text-red-600 hover:bg-red-100 hover:text-red-700"
+              >
+                Limpar carrinho e começar de novo
+              </Button>
+            </div>
+          </motion.div>
+        )}
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-5">

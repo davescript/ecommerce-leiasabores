@@ -157,6 +157,13 @@ router.post('/', async (c) => {
       'paypal',    // PayPal
     ]
 
+    console.log('Creating Stripe session with:', {
+      lineItemsCount: lineItems.length,
+      total,
+      email: body.email,
+      paymentMethodsCount: paymentMethods.length,
+    })
+
     // @ts-expect-error - Stripe types are overly restrictive, but these payment methods are valid
     session = await stripe.checkout.sessions.create({
       payment_method_types: paymentMethods,
@@ -203,6 +210,7 @@ router.post('/', async (c) => {
     const errorType = error instanceof Error ? error.constructor.name : 'UnknownError'
     const stripeErrorCode = error instanceof Error && 'code' in error ? (error as any).code : undefined
     const stripeStatusCode = error instanceof Error && 'status' in error ? (error as any).status : undefined
+    const fullError = error instanceof Error ? error : new Error(String(error))
     
     console.error(`❌ Stripe checkout error [${errorType}]: ${errorMessage}`)
     console.error('Error details:', {
@@ -211,8 +219,18 @@ router.post('/', async (c) => {
       message: errorMessage,
       email: body?.email,
       itemsCount: body?.items?.length,
+      lineItemsCount: (error as any)?.lineItems?.length,
+      fullStack: fullError.stack,
       timestamp: new Date().toISOString(),
     })
+    
+    // Log o objeto de erro completo para melhor debugging
+    if (error instanceof Error && Object.keys(error).length > 0) {
+      console.error('Additional error properties:', Object.entries(error).reduce((acc, [key, value]) => {
+        acc[key] = String(value).substring(0, 100)
+        return acc
+      }, {} as Record<string, string>))
+    }
     
     // Mensagens de erro personalizadas
     let userMessage = 'Não foi possível processar o pagamento'
@@ -230,7 +248,9 @@ router.post('/', async (c) => {
       { 
         error: userMessage, 
         debugId: session?.id || 'unknown',
-        stripeError: stripeErrorCode || undefined
+        stripeError: stripeErrorCode || undefined,
+        message: errorMessage,
+        type: errorType
       },
       500,
     )

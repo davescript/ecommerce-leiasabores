@@ -20,6 +20,13 @@ const steps = [
 
 type Step = (typeof steps)[number]['id']
 
+// Valid UUID v4 pattern - used to validate product IDs
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const isValidProductId = (id: string): boolean => {
+  return UUID_PATTERN.test(id)
+}
+
 export function Checkout() {
   const navigate = useNavigate()
   const { items, subtotal, tax, shipping, total } = useCart()
@@ -179,6 +186,15 @@ export function Checkout() {
 
       if (total <= 0) {
         throw new Error('Total inválido. Contacte suporte')
+      }
+
+      // Validate product IDs - check for invalid/placeholder IDs
+      const invalidItems = items.filter((item) => !isValidProductId(item.productId))
+      if (invalidItems.length > 0) {
+        const invalidIds = invalidItems.map((item) => item.productId).join(', ')
+        throw new Error(
+          `Carrinho contém produtos inválidos: ${invalidIds}. Limpe o carrinho e adicione novos produtos.`
+        )
       }
 
       const payload = {
