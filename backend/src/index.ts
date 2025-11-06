@@ -60,6 +60,206 @@ app.route('/api/admin', adminRoutes)
 app.route('/api/r2', r2Routes)
 app.route('/api/categories', categoriesRoutes)
 
+// Seed de Categorias (proteção por token via ADMIN_SEED_TOKEN)
+app.post('/api/admin/seed-categories', async (c) => {
+  const token = c.req.query('token')
+  const expected = c.env.ADMIN_SEED_TOKEN
+  if (!expected || token !== expected) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  const db = getDb(c.env as WorkerBindings)
+  const { categories } = dbSchema as DrizzleSchema
+
+  try {
+    const categoryStructure = [
+      {
+        id: 'cat-novidades',
+        name: 'Novidades',
+        slug: 'novidades',
+        description: 'Produtos recém-adicionados',
+        parentId: null,
+        displayOrder: 1,
+      },
+      {
+        id: 'cat-bolos',
+        name: 'Bolos & Bolos Personalizados',
+        slug: 'bolos',
+        description: 'Bolos únicos e personalizados para suas celebrações',
+        parentId: null,
+        displayOrder: 2,
+      },
+      {
+        id: 'cat-bolos-premium',
+        name: 'Bolos Premium',
+        slug: 'bolos-premium',
+        description: 'Bolos gourmet e premium',
+        parentId: 'cat-bolos',
+        displayOrder: 1,
+      },
+      {
+        id: 'cat-bolos-pequenos',
+        name: 'Bolos Pequenos',
+        slug: 'bolos-pequenos',
+        description: 'Bolos individuais e pequenos',
+        parentId: 'cat-bolos',
+        displayOrder: 2,
+      },
+      {
+        id: 'cat-bolos-casamentos',
+        name: 'Bolos para Casamentos',
+        slug: 'bolos-casamentos',
+        description: 'Bolos elegantes para cerimónias',
+        parentId: 'cat-bolos',
+        displayOrder: 3,
+      },
+      {
+        id: 'cat-bolos-tematicos',
+        name: 'Bolos Temáticos',
+        slug: 'bolos-tematicos',
+        description: 'Bolos decorados com temas especiais',
+        parentId: 'cat-bolos',
+        displayOrder: 4,
+      },
+      {
+        id: 'cat-topos',
+        name: 'Topos de Bolo',
+        slug: 'topos-de-bolo',
+        description: 'Topos personalizados e temáticos para seus bolos',
+        parentId: null,
+        displayOrder: 3,
+      },
+      {
+        id: 'cat-topos-classicos',
+        name: 'Topos Clássicos',
+        slug: 'topos-classicos',
+        description: 'Topos clássicos em acrílico',
+        parentId: 'cat-topos',
+        displayOrder: 1,
+      },
+      {
+        id: 'cat-topos-personalizados',
+        name: 'Topos Personalizados',
+        slug: 'topos-personalizados',
+        description: 'Topos com nome, idade ou mensagem',
+        parentId: 'cat-topos',
+        displayOrder: 2,
+      },
+      {
+        id: 'cat-topos-tematicos',
+        name: 'Topos Temáticos',
+        slug: 'topos-tematicos',
+        description: 'Topos com temas especiais',
+        parentId: 'cat-topos',
+        displayOrder: 3,
+      },
+      {
+        id: 'cat-temas-festas',
+        name: 'Temas para Festas',
+        slug: 'temas-festas',
+        description: 'Inspiração e produtos por tema de festa',
+        parentId: null,
+        displayOrder: 4,
+      },
+      {
+        id: 'cat-tema-aniversario',
+        name: 'Festa de Aniversário',
+        slug: 'festa-aniversario',
+        description: 'Tudo para uma festa de aniversário',
+        parentId: 'cat-temas-festas',
+        displayOrder: 1,
+      },
+      {
+        id: 'cat-tema-frozen',
+        name: 'Festa Frozen',
+        slug: 'festa-frozen',
+        description: 'Tema Frozen e Elsa',
+        parentId: 'cat-temas-festas',
+        displayOrder: 2,
+      },
+      {
+        id: 'cat-tema-barbie',
+        name: 'Festa Barbie',
+        slug: 'festa-barbie',
+        description: 'Tema Barbie',
+        parentId: 'cat-temas-festas',
+        displayOrder: 3,
+      },
+      {
+        id: 'cat-tema-princesas',
+        name: 'Festa Princesas',
+        slug: 'festa-princesas',
+        description: 'Tema Princesas Disney',
+        parentId: 'cat-temas-festas',
+        displayOrder: 4,
+      },
+      {
+        id: 'cat-tema-unicornio',
+        name: 'Festa Unicórnio',
+        slug: 'festa-unicornio',
+        description: 'Tema Unicórnio mágico',
+        parentId: 'cat-temas-festas',
+        displayOrder: 5,
+      },
+      {
+        id: 'cat-decoracoes',
+        name: 'Decorações & Acessórios',
+        slug: 'decoracoes-acessorios',
+        description: 'Complementos para suas celebrações',
+        parentId: null,
+        displayOrder: 5,
+      },
+      {
+        id: 'cat-velas',
+        name: 'Velas para Bolos',
+        slug: 'velas-bolos',
+        description: 'Velas coloridas e temáticas',
+        parentId: 'cat-decoracoes',
+        displayOrder: 1,
+      },
+      {
+        id: 'cat-confeitos',
+        name: 'Confeitos & Sprinkles',
+        slug: 'confeitos-sprinkles',
+        description: 'Adornos e confeitos para bolos',
+        parentId: 'cat-decoracoes',
+        displayOrder: 2,
+      },
+      {
+        id: 'cat-caixas',
+        name: 'Caixas de Bolo Personalizadas',
+        slug: 'caixas-bolo',
+        description: 'Caixas decoradas e personalizadas',
+        parentId: 'cat-decoracoes',
+        displayOrder: 3,
+      },
+    ]
+
+    let inserted = 0
+    let updated = 0
+    
+    for (const cat of categoryStructure) {
+      try {
+        const existing = await db.query.categories.findFirst({ 
+          where: eq(categories.slug, cat.slug) 
+        }).catch(() => null)
+
+        if (!existing) {
+          await db.insert(categories).values(cat)
+          inserted++
+        }
+      } catch (err) {
+        console.warn(`Failed to insert category ${cat.slug}:`, err)
+      }
+    }
+
+    return c.json({ ok: true, inserted, updated, total: categoryStructure.length })
+  } catch (error) {
+    console.error('Seed categories error', error)
+    return c.json({ error: 'Failed to seed categories' }, 500)
+  }
+})
+
 // Seed direto para Topos de Bolo (proteção por token via ADMIN_SEED_TOKEN)
 app.post('/api/admin/seed-topos', async (c) => {
   const token = c.req.query('token')
@@ -246,6 +446,24 @@ app.post('/api/admin/seed-categories', async (c) => {
   } catch (error) {
     console.error('Seed categories error', error)
     return c.json({ error: 'Failed to seed categories' }, 500)
+  }
+})
+
+// Seed Partyland categories and products
+app.post('/api/admin/seed-partyland', async (c) => {
+  const token = c.req.query('token')
+  const expected = c.env.ADMIN_SEED_TOKEN
+  if (!expected || token !== expected) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  try {
+    const { seedPartyland } = await import('./seeds/partyland-categories')
+    const result = await seedPartyland(c.env as WorkerBindings)
+    return c.json(result)
+  } catch (error) {
+    console.error('Seed Partyland error', error)
+    return c.json({ error: error instanceof Error ? error.message : 'Failed to seed Partyland' }, 500)
   }
 })
 
