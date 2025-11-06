@@ -5,9 +5,24 @@ import { getStripe } from '../services/stripe'
 import type StripeType from 'stripe'
 import type { WorkerBindings } from '../types/bindings'
 import { buildProductResponse, resolveImageBaseUrl } from '../utils/product-images'
+import {
+  isValidEmail,
+  validateCartItems,
+  validatePayloadSize,
+  isValidPrice,
+  isValidQuantity,
+  isValidUUID,
+  isValidUrl,
+  SECURITY_LIMITS,
+} from '../utils/validation'
+import { validateRequestSize, rateLimit } from '../middleware/security'
 
 // Instância sem genéricos explícitos para evitar incompatibilidades de tipos do Env
 const router = new Hono()
+
+// Aplicar rate limiting ao checkout (mais restritivo por ser endpoint crítico)
+router.use('/*', rateLimit(20, 60000)) // 20 requisições por minuto
+router.use('/*', validateRequestSize)
 
 const HTTP_URL_PATTERN = /^https?:\/\//i
 
@@ -54,12 +69,23 @@ router.post('/', async (c) => {
   let session: StripeType.Checkout.Session | undefined
 
   try {
-    body = await c.req.json<{
+    // Validar tamanho do payload ANTES de fazer parse
+    const rawBody = await c.req.text()
+    const payloadValidation = validatePayloadSize(rawBody)
+    if (!payloadValidation.valid) {
+      console.error('❌ Payload size validation failed:', payloadValidation.error)
+      return c.json({ 
+        error: 'Payload muito grande',
+        debugId: 'payload_too_large'
+      }, 413)
+    }
+
+    body = JSON.parse(rawBody) as {
       items: Array<{ productId: string; quantity: number }>
       shippingAddress: Record<string, unknown>
       billingAddress: Record<string, unknown>
       email: string
-    }>()
+    }
 
     console.log('📦 Checkout request received:', {
       itemsCount: body?.items?.length || 0,
@@ -69,42 +95,53 @@ router.post('/', async (c) => {
       hasBillingAddress: !!body?.billingAddress,
     })
 
-    if (!body?.items?.length) {
-      console.error('❌ Validation failed: Cart is empty')
+    // Validação rigorosa de items do carrinho
+    const cartValidation = validateCartItems(body?.items || [])
+    if (!cartValidation.valid) {
+      console.error('❌ Cart validation failed:', cartValidation.error)
       return c.json({ 
-        error: 'Carrinho vazio. Adicione produtos antes de pagar',
-        debugId: 'empty_cart'
+        error: cartValidation.error || 'Carrinho inválido',
+        debugId: 'cart_validation_failed'
       }, 400)
     }
 
-    if (!body.email) {
-      console.error('❌ Validation failed: Email is missing')
+    if (!body.email || typeof body.email !== 'string') {
+      console.error('❌ Validation failed: Email is missing or invalid type')
       return c.json({ 
         error: 'Email é obrigatório',
         debugId: 'missing_email'
       }, 400)
     }
 
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const trimmedEmail = body.email.trim()
-    if (!emailRegex.test(trimmedEmail)) {
-      console.error('❌ Validation failed: Invalid email format', { email: trimmedEmail })
+    // Validar formato de email com função de validação robusta
+    const trimmedEmail = body.email.trim().toLowerCase()
+    if (!isValidEmail(trimmedEmail)) {
+      console.error('❌ Validation failed: Invalid email format', { email: trimmedEmail.substring(0, 20) })
       return c.json({ 
         error: 'Formato de email inválido. Use um email válido (ex: seu.email@dominio.com)',
         debugId: 'invalid_email_format'
       }, 400)
     }
 
-    // Normalizar email (trim e lowercase)
-    body.email = trimmedEmail.toLowerCase()
+    // Normalizar email
+    body.email = trimmedEmail
 
+    // Normalizar e validar items com validações rigorosas
     const normalizedItems = body.items
-      .map((item) => ({
-        productId: item.productId?.trim(),
-        quantity: Number.isFinite(item.quantity) ? Math.max(1, Math.min(99, Math.floor(item.quantity))) : 1,
-      }))
-      .filter((item) => Boolean(item.productId)) as Array<{ productId: string; quantity: number }>
+      .map((item) => {
+        const productId = typeof item.productId === 'string' ? item.productId.trim() : ''
+        const quantity = typeof item.quantity === 'number' && isValidQuantity(item.quantity)
+          ? Math.floor(item.quantity)
+          : 1
+        
+        // Validar UUID do produto
+        if (!isValidUUID(productId)) {
+          throw new Error(`Invalid product ID format: ${productId}`)
+        }
+        
+        return { productId, quantity }
+      })
+      .filter((item) => item.productId.length > 0) as Array<{ productId: string; quantity: number }>
 
     if (!normalizedItems.length) {
       console.error('❌ Validation failed: No valid products after normalization', {
@@ -170,25 +207,35 @@ router.post('/', async (c) => {
       const quantity = item.quantity
       const unitPrice = product.price
       
-      // Validação: preço não pode ser negativo ou zero
-      if (unitPrice <= 0) {
-        throw new Error(`Invalid price for product ${product.id}`)
+      // Validação rigorosa de preço usando função de validação
+      if (!isValidPrice(unitPrice)) {
+        console.error(`❌ Invalid price for product ${product.id}:`, unitPrice)
+        throw new Error(`Preço inválido para produto ${product.id}: ${unitPrice}`)
+      }
+      
+      // Validar quantidade usando função de validação
+      if (!isValidQuantity(quantity)) {
+        console.error(`❌ Invalid quantity for product ${product.id}:`, quantity)
+        throw new Error(`Quantidade inválida para produto ${product.id}: ${quantity}`)
       }
       
       // Validar e truncar nome do produto (máximo 500 caracteres para Stripe)
-      const productName = (product.name || 'Produto sem nome').substring(0, 500)
+      const productName = (product.name || 'Produto sem nome')
+        .substring(0, SECURITY_LIMITS.MAX_PRODUCT_NAME_LENGTH)
+        .replace(/[<>]/g, '') // Proteção XSS básica
       
       // Validar e truncar descrição (máximo 500 caracteres para Stripe)
       const productDescription = (product.shortDescription || product.description || '')
-        .substring(0, 500)
+        .substring(0, SECURITY_LIMITS.MAX_DESCRIPTION_LENGTH)
+        .replace(/[<>]/g, '') // Proteção XSS básica
       
-      // Validar que unit_amount está dentro dos limites do Stripe (mínimo 1 cent, máximo 99999999)
+      // Validar que unit_amount está dentro dos limites do Stripe
       const unitAmountCents = Math.round(unitPrice * 100)
       if (unitAmountCents < 1) {
-        throw new Error(`Price too low for product ${product.id}: ${unitPrice}`)
+        throw new Error(`Preço muito baixo para produto ${product.id}: ${unitPrice}`)
       }
       if (unitAmountCents > 99999999) {
-        throw new Error(`Price too high for product ${product.id}: ${unitPrice}`)
+        throw new Error(`Preço muito alto para produto ${product.id}: ${unitPrice}`)
       }
       
       return {
@@ -201,7 +248,7 @@ router.post('/', async (c) => {
           },
           unit_amount: unitAmountCents,
         },
-        quantity: Math.max(1, Math.min(99, quantity)), // Garantir quantidade entre 1 e 99
+        quantity: Math.max(1, Math.min(SECURITY_LIMITS.MAX_QUANTITY_PER_ITEM, quantity)),
       }
     })
 
@@ -210,13 +257,21 @@ router.post('/', async (c) => {
       return sum + product.price * item.quantity
     }, 0)
 
-    // Validações de segurança
-    if (subtotal < 0) {
-      return c.json({ error: 'Invalid cart total' }, 400)
+    // Validações de segurança rigorosas
+    if (subtotal < 0 || !Number.isFinite(subtotal)) {
+      console.error('❌ Invalid subtotal:', subtotal)
+      return c.json({ 
+        error: 'Total do carrinho inválido',
+        debugId: 'invalid_subtotal'
+      }, 400)
     }
 
-    if (subtotal > 100000) { // Limite de 100k€ por transação
-      return c.json({ error: 'Cart total exceeds maximum allowed' }, 400)
+    if (subtotal > SECURITY_LIMITS.MAX_CART_TOTAL) {
+      console.error('❌ Cart total exceeds maximum:', subtotal)
+      return c.json({ 
+        error: `Total do carrinho excede o limite máximo de €${SECURITY_LIMITS.MAX_CART_TOTAL.toLocaleString('pt-PT')}`,
+        debugId: 'cart_total_exceeded'
+      }, 400)
     }
 
     const tax = Number((subtotal * 0.23).toFixed(2))
@@ -330,10 +385,22 @@ router.post('/', async (c) => {
       return c.json({ error: 'No valid items to process' }, 400)
     }
 
-    // Validar URLs de sucesso/cancelamento
-    if (!origin || !origin.startsWith('http')) {
-      console.error('❌ Invalid origin:', origin)
-      return c.json({ error: 'Invalid origin URL' }, 400)
+    // Validar URLs de sucesso/cancelamento com validação rigorosa
+    if (!origin || !isValidUrl(origin)) {
+      console.error('❌ Invalid origin URL:', origin)
+      return c.json({ 
+        error: 'URL de origem inválida',
+        debugId: 'invalid_origin'
+      }, 400)
+    }
+    
+    // Validar que origin é HTTPS em produção
+    if (env.ENVIRONMENT === 'production' && !origin.startsWith('https://')) {
+      console.error('❌ Non-HTTPS origin in production:', origin)
+      return c.json({ 
+        error: 'Apenas conexões HTTPS são permitidas em produção',
+        debugId: 'non_https_origin'
+      }, 400)
     }
 
     try {
@@ -566,24 +633,62 @@ router.post('/', async (c) => {
 
 router.post('/webhook', async (c) => {
   const signature = c.req.header('stripe-signature')
+  
+  // Validar tamanho do body do webhook
   const rawBody = await c.req.text()
+  const payloadValidation = validatePayloadSize(rawBody)
+  if (!payloadValidation.valid) {
+    console.error('❌ Webhook payload too large:', payloadValidation.error)
+    return c.json({ error: 'Webhook payload too large' }, 413)
+  }
 
-  if (!signature) {
-    return c.json({ error: 'Missing signature header' }, 400)
+  if (!signature || typeof signature !== 'string' || signature.length < 20) {
+    console.error('❌ Missing or invalid signature header')
+    return c.json({ 
+      error: 'Missing or invalid signature header',
+      debugId: 'missing_signature'
+    }, 400)
   }
 
   try {
     const env = c.env as unknown as WorkerBindings
-    const stripe = getStripe(env)
-    if (!env.STRIPE_WEBHOOK_SECRET) {
-      console.error('Missing STRIPE_WEBHOOK_SECRET binding')
-      return c.json({ error: 'Webhook misconfigured' }, 500)
+    
+    // Validar webhook secret antes de processar
+    if (!env.STRIPE_WEBHOOK_SECRET || typeof env.STRIPE_WEBHOOK_SECRET !== 'string') {
+      console.error('❌ Missing STRIPE_WEBHOOK_SECRET binding')
+      return c.json({ 
+        error: 'Webhook misconfigured',
+        debugId: 'missing_webhook_secret'
+      }, 500)
     }
-    const event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      env.STRIPE_WEBHOOK_SECRET
-    )
+    
+    // Validar formato do webhook secret
+    if (!env.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) {
+      console.error('❌ Invalid STRIPE_WEBHOOK_SECRET format')
+      return c.json({ 
+        error: 'Webhook secret format invalid',
+        debugId: 'invalid_webhook_secret_format'
+      }, 500)
+    }
+    
+    const stripe = getStripe(env)
+    
+    // Construir evento com validação de assinatura
+    let event: StripeType.Event
+    try {
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        env.STRIPE_WEBHOOK_SECRET
+      )
+    } catch (webhookError) {
+      const errorMessage = webhookError instanceof Error ? webhookError.message : 'Unknown error'
+      console.error('❌ Webhook signature validation failed:', errorMessage)
+      return c.json({ 
+        error: 'Invalid webhook signature',
+        debugId: 'invalid_signature'
+      }, 400)
+    }
     const db = getDb({ DB: env.DB })
     const { orders, cartItems } = dbSchema
 
@@ -616,14 +721,57 @@ router.post('/webhook', async (c) => {
           total: parseAmount(metadata.total, session.amount_total),
         }
 
-        const shippingAddress = metadata.shippingAddress ? JSON.parse(metadata.shippingAddress) : session.shipping_details
-        const billingAddress = metadata.billingAddress ? JSON.parse(metadata.billingAddress) : session.customer_details
+        // Validar e parsear endereços com tratamento de erro robusto
+        let shippingAddress: Record<string, unknown> | null = null
+        let billingAddress: Record<string, unknown> | null = null
+        
+        // Tentar obter shipping address do metadata primeiro, depois do session
+        if (metadata.shippingAddress && typeof metadata.shippingAddress === 'string') {
+          try {
+            const parsed = JSON.parse(metadata.shippingAddress)
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              shippingAddress = parsed as Record<string, unknown>
+            }
+          } catch (parseError) {
+            console.warn('⚠️ Failed to parse shipping address from metadata:', parseError)
+          }
+        }
+        
+        // Fallback para shipping address do session
+        if (!shippingAddress && session.shipping_details) {
+          try {
+            shippingAddress = (session.shipping_details as unknown) as Record<string, unknown>
+          } catch {
+            // Ignorar erro
+          }
+        }
+        
+        // Tentar obter billing address do metadata primeiro, depois do session
+        if (metadata.billingAddress && typeof metadata.billingAddress === 'string') {
+          try {
+            const parsed = JSON.parse(metadata.billingAddress)
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              billingAddress = parsed as Record<string, unknown>
+            }
+          } catch (parseError) {
+            console.warn('⚠️ Failed to parse billing address from metadata:', parseError)
+          }
+        }
+        
+        // Fallback para billing address do session
+        if (!billingAddress && session.customer_details) {
+          try {
+            billingAddress = (session.customer_details as unknown) as Record<string, unknown>
+          } catch {
+            // Ignorar erro
+          }
+        }
 
         if (!existing) {
           const orderId = crypto.randomUUID()
           await db.insert(orders).values({
             id: orderId,
-            userId: metadata.userId || session.customer_email || 'guest',
+            userId: (metadata.userId as string) || session.customer_email || 'guest',
             stripeSessionId: session.id,
             email: session.customer_email || '',
             subtotal: totals.subtotal,
@@ -631,8 +779,8 @@ router.post('/webhook', async (c) => {
             shipping: totals.shipping,
             total: totals.total,
             status: 'paid',
-            shippingAddress,
-            billingAddress,
+            shippingAddress: shippingAddress || null,
+            billingAddress: billingAddress || null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           })

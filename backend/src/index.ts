@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 
 import productRoutes from './routes/products'
@@ -18,16 +17,39 @@ import type { WorkerBindings } from './types/bindings'
 const app = new Hono<{ Bindings: WorkerBindings; Variables: { user?: { userId: string; email: string; role: string } } }>()
 
 app.use(logger())
-// CORS dinâmico baseado em variável de ambiente ALLOWED_ORIGINS (CSV)
-// CORS permissivo para evitar bloqueios no navegador
-// Em produção podemos restringir novamente para os domínios específicos
-app.use('*', cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['*', 'Content-Type', 'Authorization'],
-  credentials: false,
-  maxAge: 86400,
-}))
+
+// CORS configurado com segurança
+// Em produção, restringir origins permitidas
+app.use('*', async (c, next) => {
+  const env = c.env as unknown as WorkerBindings
+  const allowedOrigins = env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || []
+  
+  // Em desenvolvimento, permitir qualquer origin
+  // Em produção, usar lista de origins permitidas
+  const origin = env.ENVIRONMENT === 'production' && allowedOrigins.length > 0
+    ? (c.req.header('origin') && allowedOrigins.includes(c.req.header('origin')!) 
+       ? c.req.header('origin') 
+       : allowedOrigins[0])
+    : '*'
+  
+  await next()
+  
+  // Adicionar headers CORS
+  c.header('Access-Control-Allow-Origin', origin || '*')
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  c.header('Access-Control-Max-Age', '86400')
+  
+  // Headers de segurança
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('X-Frame-Options', 'DENY')
+  c.header('X-XSS-Protection', '1; mode=block')
+  
+  // Em produção, adicionar CSP básico
+  if (env.ENVIRONMENT === 'production') {
+    c.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://*.stripe.com;")
+  }
+})
 
 // Garantir cabeçalhos CORS mesmo quando o plugin não os adiciona
 app.use('*', async (c, next) => {
