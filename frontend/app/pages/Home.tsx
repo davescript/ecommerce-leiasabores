@@ -16,12 +16,12 @@ const heroImage = 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?
 
 const fallbackProducts: Product[] = [
   {
-    id: 'placeholder-1',
-    name: 'Topo Minnie Deluxe',
+    id: '48f71625-3167-4508-8039-b1c7086aad55',
+    name: 'Topo Minnie',
     description: 'Topo acrílico personalizável com elementos premium e brilho holográfico.',
     shortDescription: 'Topo Minnie com personalização imediata',
-    price: 24.9,
-    originalPrice: 29.9,
+    price: 9.9,
+    originalPrice: 14.9,
     category: 'topos-de-bolo',
     images: ['https://api.leiasabores.pt/api/r2/topos-de-bolo/tpo-minie.jpeg'],
     imageUrl: 'https://api.leiasabores.pt/api/r2/topos-de-bolo/tpo-minie.jpeg',
@@ -33,12 +33,12 @@ const fallbackProducts: Product[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: 'placeholder-2',
-    name: 'Topo Homem Aranha Pop',
+    id: 'd163afb9-2529-4276-b1e7-c7a18745eef9',
+    name: 'Tpopo Homem Aranha',
     description: 'Topo em camadas com efeito 3D e cores vibrantes.',
     shortDescription: 'Personalize idade e nome em minutos',
-    price: 21.9,
-    originalPrice: 26.5,
+    price: 9.9,
+    originalPrice: 14.9,
     category: 'topos-de-bolo',
     images: ['https://api.leiasabores.pt/api/r2/topos-de-bolo/tpopo-homem-aranha.jpeg'],
     imageUrl: 'https://api.leiasabores.pt/api/r2/topos-de-bolo/tpopo-homem-aranha.jpeg',
