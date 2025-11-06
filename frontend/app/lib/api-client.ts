@@ -41,25 +41,31 @@ function normalizeHeaders(input: unknown): AxiosHeaders {
 }
 
 // Configurar baseURL: usar proxy local em dev, ou API direta em produção
-// SOLUÇÃO TEMPORÁRIA: Usar API direta para evitar erro 405 do proxy
+// SOLUÇÃO: Usar API direta em produção para evitar erro 405 do proxy
 const getBaseURL = () => {
   // Se VITE_API_URL estiver definido, usar diretamente
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL
   }
   
-  // Em desenvolvimento, usar proxy local
-  if (import.meta.env.DEV || window.location.hostname === 'localhost') {
-    return '/api'
+  // Em desenvolvimento (localhost), usar proxy local
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return '/api'
+    }
   }
   
-  // Em produção, usar API direta do Worker para evitar problemas com proxy
-  // TODO: Corrigir proxy do Cloudflare Pages e voltar a usar '/api'
+  // Em produção, SEMPRE usar API direta do Worker
+  // O proxy do Cloudflare Pages está causando erro 405
   return 'https://api.leiasabores.pt/api'
 }
 
+const baseURL = getBaseURL()
+console.log('[API Client] Base URL:', baseURL)
+
 const api = axios.create({
-  baseURL: getBaseURL(),
+  baseURL,
   timeout: 10000,
 })
 
