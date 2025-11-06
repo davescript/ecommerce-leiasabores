@@ -24,16 +24,61 @@ export const onRequest = async (ctx: FunctionContext) => {
   const path = url.pathname.replace(/^\/api/, '')
   const target = upstreamBase + path + (url.search || '')
 
-  // Reencaminhar a requisição
-  const init: RequestInit = { method: request.method, headers: request.headers }
-  if (!['GET', 'HEAD'].includes(request.method)) {
-    init.body = await request.clone().arrayBuffer()
+  // Preparar headers para o upstream, removendo headers que não devem ser reenviados
+  const upstreamHeaders = new Headers()
+  for (const [key, value] of request.headers.entries()) {
+    // Não reenviar headers de host, connection, etc
+    if (!['host', 'connection', 'cf-ray', 'cf-connecting-ip', 'cf-visitor'].includes(key.toLowerCase())) {
+      upstreamHeaders.set(key, value)
+    }
   }
 
-  const resp = await fetch(target, init)
-  const headers = new Headers(resp.headers)
-  // Garantir cabeçalhos CORS para o browser (mesmo não necessários em same-origin)
-  Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v))
+  // Reencaminhar a requisição com método, headers e body corretos
+  const init: RequestInit = {
+    method: request.method,
+    headers: upstreamHeaders,
+  }
 
-  return new Response(resp.body, { status: resp.status, headers })
+  // Para métodos que podem ter body (POST, PUT, PATCH, DELETE)
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+    try {
+      const body = await request.clone().arrayBuffer()
+      if (body.byteLength > 0) {
+        init.body = body
+      }
+    } catch (error) {
+      console.error('Error reading request body:', error)
+    }
+  }
+
+  try {
+    const resp = await fetch(target, init)
+    const headers = new Headers(resp.headers)
+    
+    // Garantir cabeçalhos CORS para o browser
+    Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v))
+    
+    // Garantir que Content-Type seja preservado
+    if (resp.headers.get('content-type')) {
+      headers.set('Content-Type', resp.headers.get('content-type')!)
+    }
+
+    return new Response(resp.body, { 
+      status: resp.status, 
+      statusText: resp.statusText,
+      headers 
+    })
+  } catch (error) {
+    console.error('Proxy error:', error)
+    return new Response(
+      JSON.stringify({ error: 'Failed to proxy request', message: error instanceof Error ? error.message : 'Unknown error' }),
+      { 
+        status: 502,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      }
+    )
+  }
 }
