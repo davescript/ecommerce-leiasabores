@@ -305,19 +305,14 @@ router.post('/', async (c) => {
       'card',      // Cartão de crédito/débito - sempre disponível
     ]
 
-    // Adicionar métodos regionais apenas se a conta Stripe os suportar
-    // Estes métodos podem falhar se não estiverem habilitados na conta
-    const optionalPaymentMethods: StripeType.Checkout.SessionCreateParams.PaymentMethodType[] = [
-      'ideal',     // iDEAL (Holanda)
-      'bancontact', // Bancontact (Bélgica)
-      'eps',       // EPS (Áustria)
-      'giropay',   // giropay (Alemanha)
-      'p24',       // Przelewy24 (Polónia)
-    ]
-
-    // Adicionar métodos opcionais (se falharem, o Stripe ignora silenciosamente)
-    // Nota: PayPal e Klarna podem requerer configuração adicional
-    // paymentMethods.push(...optionalPaymentMethods)
+    // Métodos regionais opcionais (comentados - podem ser adicionados se a conta Stripe os suportar)
+    // const optionalPaymentMethods: StripeType.Checkout.SessionCreateParams.PaymentMethodType[] = [
+    //   'ideal',     // iDEAL (Holanda)
+    //   'bancontact', // Bancontact (Bélgica)
+    //   'eps',       // EPS (Áustria)
+    //   'giropay',   // giropay (Alemanha)
+    //   'p24',       // Przelewy24 (Polónia)
+    // ]
 
     console.log('Creating Stripe session with:', {
       lineItemsCount: lineItems.length,
@@ -401,10 +396,6 @@ router.post('/', async (c) => {
           timestamp: new Date().toISOString(),
         },
         locale: 'pt',
-        consent_collection: {
-          promotions: 'auto',
-          terms_of_service: 'auto',
-        },
       }
 
       console.log('Stripe session params:', {
@@ -486,10 +477,6 @@ router.post('/', async (c) => {
               timestamp: new Date().toISOString(),
             },
             locale: 'pt',
-            consent_collection: {
-              promotions: 'auto',
-              terms_of_service: 'auto',
-            },
           })
           console.log('✅ Retry with card only succeeded:', session.id)
         } catch (retryError) {

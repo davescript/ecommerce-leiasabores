@@ -12,7 +12,7 @@ export function getStripe(env: WorkerBindings) {
   }
 
   return new Stripe(env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-11-20.acacia',
+    apiVersion: '2023-10-16',
     httpClient: Stripe.createFetchHttpClient(),
     maxNetworkRetries: 2,
     timeout: 30000,
