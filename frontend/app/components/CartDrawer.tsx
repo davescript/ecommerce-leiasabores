@@ -1,6 +1,7 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
-import { Sheet, SheetTrigger, SheetContent, SheetFooter, SheetClose } from '@components/ui/sheet'
+import { Sheet, SheetTrigger, SheetContent, SheetFooter } from '@components/ui/sheet'
 import { Button } from '@components/ui/button'
 import { ScrollArea } from '@components/ui/scroll-area'
 import { Separator } from '@components/ui/separator'
@@ -12,7 +13,13 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ children }: CartDrawerProps) {
+  const contentRef = useRef<HTMLDivElement>(null)
   const { items, subtotal, tax, shipping, total, removeItem, updateQuantity } = useCart()
+
+  const closeSheet = () => {
+    const closeButton = contentRef.current?.querySelector('button[aria-label="Fechar"]') as HTMLButtonElement
+    closeButton?.click()
+  }
 
   const emptyState = (
     <div className="flex h-full flex-col items-center justify-center text-center">
@@ -30,7 +37,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent>
+      <SheetContent ref={contentRef}>
         <div className="flex h-full flex-col">
           {items.length === 0 ? (
             emptyState
@@ -110,16 +117,12 @@ export function CartDrawer({ children }: CartDrawerProps) {
                     <span>Total</span>
                     <span className="text-xl text-primary">{formatPrice(total)}</span>
                   </div>
-                  <SheetClose asChild>
-                    <Link to="/carrinho" className="block">
-                      <Button className="w-full">Ver carrinho completo</Button>
-                    </Link>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Link to="/checkout" className="block">
-                      <Button variant="default" className="w-full">Finalizar compra</Button>
-                    </Link>
-                  </SheetClose>
+                  <Link to="/carrinho" onClick={closeSheet}>
+                    <Button className="w-full">Ver carrinho completo</Button>
+                  </Link>
+                  <Link to="/checkout" onClick={closeSheet}>
+                    <Button variant="default" className="w-full">Finalizar compra</Button>
+                  </Link>
                 </div>
               </SheetFooter>
             </>
