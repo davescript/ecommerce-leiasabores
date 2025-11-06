@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, ArrowLeft, CreditCard, ShieldCheck, Truck, Sparkles } from 'lucide-react'
@@ -21,6 +21,7 @@ const steps = [
 type Step = (typeof steps)[number]['id']
 
 export function Checkout() {
+  const navigate = useNavigate()
   const { items, subtotal, tax, shipping, total } = useCart()
   const [step, setStep] = useState<Step>('shipping')
   const [error, setError] = useState<string | null>(null)
@@ -88,8 +89,8 @@ export function Checkout() {
           <Sparkles size={36} className="mx-auto mb-4 text-primary" />
           <h2 className="text-2xl font-bold text-secondary">O seu carrinho está vazio</h2>
           <p className="mt-2 text-sm text-gray-600">Adicione produtos personalizados antes de avançar para o checkout.</p>
-          <Button asChild className="mt-6 rounded-full">
-            <Link to="/catalogo">Explorar catálogo</Link>
+          <Button onClick={() => navigate('/catalogo')} className="mt-6 rounded-full">
+            Explorar catálogo
           </Button>
         </div>
       </div>

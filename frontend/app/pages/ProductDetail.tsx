@@ -92,8 +92,8 @@ export function ProductDetail() {
         <div className="container-xl py-24 text-center">
           <h1 className="text-3xl font-bold text-secondary">Produto não encontrado</h1>
           <p className="mt-3 text-gray-600">Verifique o link ou explore o nosso catálogo.</p>
-          <Button asChild className="mt-6">
-            <Link to="/catalogo">Explorar Catálogo</Link>
+          <Button onClick={() => window.location.href = '/catalogo'} className="mt-6">
+            Explorar Catálogo
           </Button>
         </div>
       </div>
@@ -125,8 +125,8 @@ export function ProductDetail() {
         <div className="container-xl py-24 text-center">
           <h1 className="text-3xl font-bold text-secondary">Produto indisponível</h1>
           <p className="mt-3 text-gray-600">Este item pode ter sido removido ou estar esgotado.</p>
-          <Button asChild className="mt-6">
-            <Link to="/catalogo">Ver outros produtos</Link>
+          <Button onClick={() => window.location.href = '/catalogo'} className="mt-6">
+            Ver outros produtos
           </Button>
         </div>
       </div>
