@@ -115,20 +115,11 @@ export function CartDrawer({ children }: CartDrawerProps) {
                       <Link to="/carrinho">Ver carrinho completo</Link>
                     </Button>
                   </SheetClose>
-                  <Button 
-                    asChild 
-                    variant="default" 
-                    className="w-full"
-                    onClick={(e) => {
-                      const sheet = document.querySelector('[data-state="open"]')
-                      if (sheet) {
-                        const closeButton = sheet.querySelector('[data-radix-dialog-close]') as HTMLButtonElement
-                        closeButton?.click()
-                      }
-                    }}
-                  >
-                    <Link to="/checkout">Finalizar compra</Link>
-                  </Button>
+                  <SheetClose asChild>
+                    <Button asChild variant="default" className="w-full">
+                      <Link to="/checkout">Finalizar compra</Link>
+                    </Button>
+                  </SheetClose>
                 </div>
               </SheetFooter>
             </>
