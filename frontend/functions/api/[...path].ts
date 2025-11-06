@@ -1,5 +1,4 @@
 // Cloudflare Pages Functions handler
-// @ts-ignore - PagesFunction type is provided by Cloudflare runtime
 export const onRequest = async ({ request }: { request: Request }) => {
   const url = new URL(request.url)
   

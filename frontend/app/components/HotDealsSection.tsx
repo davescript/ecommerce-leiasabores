@@ -7,7 +7,6 @@ import { ProductCard } from '@components/ProductCard'
 import { Skeleton } from '@components/ui/skeleton'
 import { fetchProducts } from '@lib/api'
 import { useCart } from '@hooks/useCart'
-import type { Product } from '@types'
 
 export function HotDealsSection() {
   const { addItem } = useCart()

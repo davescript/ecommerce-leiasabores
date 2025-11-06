@@ -64,7 +64,7 @@ export function CategorySubmenu() {
             className="absolute left-0 right-0 z-50 mt-2 grid w-80 max-w-sm grid-cols-1 gap-2 rounded-2xl border border-white/40 bg-white/90 p-4 shadow-2xl backdrop-blur-xl md:w-96"
             onClick={(e) => e.stopPropagation()}
           >
-            {displayCategories.map((category: any) => (
+            {displayCategories.map((category: Category | { id: string; name: string; slug: string; description: string }) => (
               <Link
                 key={category.id || category.slug}
                 to={`/catalogo?categoria=${category.slug}`}
