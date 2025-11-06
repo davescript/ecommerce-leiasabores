@@ -40,9 +40,30 @@ function normalizeHeaders(input: unknown): AxiosHeaders {
   return headers
 }
 
-// Forçamos same-origin para eliminar CORS: todas as chamadas passam por /api (Pages Functions)
+// Configurar baseURL: usar proxy local em dev, ou API direta em produção se proxy falhar
+// Em produção, tenta primeiro o proxy (/api), mas pode fallback para API direta
+const getBaseURL = () => {
+  // Se VITE_API_URL estiver definido, usar diretamente
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  
+  // Em produção, verificar se estamos no mesmo domínio ou usar API direta
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    // Se estiver em leiasabores.pt, usar proxy local (/api)
+    // Se proxy falhar, pode tentar api.leiasabores.pt diretamente
+    if (hostname === 'leiasabores.pt' || hostname === 'www.leiasabores.pt' || hostname.includes('pages.dev')) {
+      return '/api'
+    }
+  }
+  
+  // Default: proxy local
+  return '/api'
+}
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseURL(),
   timeout: 10000,
 })
 
