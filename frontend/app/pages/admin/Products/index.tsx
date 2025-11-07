@@ -422,23 +422,8 @@ export function ProductsList() {
     }
   }
 
-  // Se ainda está carregando, mostrar versão rápida
-  if (isLoading || !data) {
-    return (
-      <QuickProductsList
-        onCreateProduct={() => setShowForm(true)}
-        onEditProduct={(product) => {
-          setEditing(product)
-          setShowForm(true)
-        }}
-        onDeleteProduct={(id) => {
-          if (confirm('Excluir produto?')) {
-            deleteMutation.mutate(id)
-          }
-        }}
-      />
-    )
-  }
+  // Sempre mostrar a versão completa, mesmo durante carregamento
+  // A versão completa já tem loading spinner integrado
 
   return (
     <div className="space-y-6">
