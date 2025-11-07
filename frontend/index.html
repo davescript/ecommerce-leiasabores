@@ -14,9 +14,11 @@
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.85em' font-size='90'>🍰</text></svg>" />
   <title>Leia Sabores · Topos personalizados & bolos artesanais</title>
+  <!-- FORÇAR CLOUDFLARE A ATUALIZAR -->
+  <meta name="cache-buster" content="v6.0-force-update-1762534080" />
   <script>
-    // FORÇAR NO CACHE - Versão 5.0 (Admin Recriado)
-    const VERSION = 'v5.0-admin-rebuild-' + Date.now()
+    // FORÇAR NO CACHE - Versão 6.0 (FORÇA CLOUDFLARE)
+    const VERSION = 'v6.0-force-cloudflare-' + Date.now()
     console.log('[App] Loading version:', VERSION)
     
     // Limpar cache AGRESSIVAMENTE - FORÇAR ATUALIZAÇÃO IMEDIATA
@@ -57,11 +59,11 @@
         localStorage.setItem('app_version', VERSION)
         
         // 4. FORÇAR RELOAD IMEDIATO se versão antiga (especialmente para /admin)
-        if (oldVersion && (oldVersion.includes('v3.0') || oldVersion.includes('v4.0') || !oldVersion.includes('v5.0'))) {
+        if (oldVersion && (oldVersion.includes('v3.0') || oldVersion.includes('v4.0') || oldVersion.includes('v5.0') || !oldVersion.includes('v6.0'))) {
           console.log('[App] Versão muito antiga detectada, forçando reload IMEDIATO...')
           // Se estiver em /admin, forçar reload com cache buster
           if (window.location.pathname.startsWith('/admin')) {
-            window.location.href = window.location.origin + '/admin?nocache=' + Date.now() + '&v=' + VERSION
+            window.location.href = window.location.origin + '/admin?force=' + Date.now() + '&nocache=1&v=' + VERSION
           } else {
             setTimeout(() => {
               window.location.reload(true)

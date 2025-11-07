@@ -1,108 +1,17 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Forçar Atualização - Leia Sabores</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .container {
-      text-align: center;
-      padding: 2rem;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 1rem;
-      backdrop-filter: blur(10px);
-      max-width: 500px;
-    }
-    button {
-      background: white;
-      color: #667eea;
-      border: none;
-      padding: 1rem 2rem;
-      font-size: 1.1rem;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      margin: 0.5rem;
-      font-weight: 600;
-      transition: transform 0.2s;
-    }
-    button:hover {
-      transform: scale(1.05);
-    }
-    .status {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 0.5rem;
-      font-size: 0.9rem;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Force Update - Admin Panel</title>
+    <script>
+        // Forçar redirecionamento para admin com cache buster
+        const timestamp = Date.now()
+        const adminUrl = '/admin?force=' + timestamp + '&nocache=1&v=6.0'
+        console.log('Forcing redirect to:', adminUrl)
+        window.location.replace(adminUrl)
+    </script>
 </head>
 <body>
-  <div class="container">
-    <h1>🔄 Forçar Atualização</h1>
-    <p>Este script irá limpar todo o cache e recarregar a página.</p>
-    
-    <button onclick="forceUpdate()">Limpar Cache e Recarregar</button>
-    
-    <div id="status" class="status" style="display: none;"></div>
-  </div>
-
-  <script>
-    async function forceUpdate() {
-      const status = document.getElementById('status')
-      status.style.display = 'block'
-      
-      try {
-        // 1. Desregistrar todos os Service Workers
-        status.innerHTML = '1. Desregistrando Service Workers...'
-        const registrations = await navigator.serviceWorker.getRegistrations()
-        for (const registration of registrations) {
-          await registration.unregister()
-          console.log('Service Worker desregistrado:', registration.scope)
-        }
-        
-        // 2. Limpar todos os caches
-        status.innerHTML = '2. Limpando Cache Storage...'
-        const cacheNames = await caches.keys()
-        for (const cacheName of cacheNames) {
-          await caches.delete(cacheName)
-          console.log('Cache deletado:', cacheName)
-        }
-        
-        // 3. Limpar localStorage e sessionStorage
-        status.innerHTML = '3. Limpando Storage...'
-        localStorage.clear()
-        sessionStorage.clear()
-        
-        // 4. Recarregar a página
-        status.innerHTML = '✅ Cache limpo! Redirecionando...'
-        setTimeout(() => {
-          window.location.href = '/admin'
-        }, 1000)
-        
-      } catch (error) {
-        status.innerHTML = '❌ Erro: ' + error.message
-        console.error('Erro ao limpar cache:', error)
-      }
-    }
-    
-    // Auto-executar após 2 segundos
-    setTimeout(() => {
-      if (confirm('Deseja limpar o cache automaticamente?')) {
-        forceUpdate()
-      }
-    }, 2000)
-  </script>
+    <p>Redirecionando para o painel admin...</p>
 </body>
 </html>
-
