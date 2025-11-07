@@ -23,11 +23,12 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
 
     // Para o admin, permitir acesso mesmo sem token
     // O próprio painel Admin tem campo para configurar o token
-    // Verificar se estamos na rota /admin
-    const isAdminRoute = location.pathname === '/admin'
+    // Verificar se estamos na rota /admin ou sub-rotas
+    const isAdminRoute = location.pathname.startsWith('/admin')
     
     if (isAdminRoute) {
       // Permitir acesso ao admin sempre (ele gerencia seu próprio token)
+      console.log('[ProtectedRoute] Admin route detected, allowing access')
       setIsAuthenticated(true)
       return
     }
@@ -62,13 +63,9 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
         setIsAuthenticated(false)
       }
     } catch {
-      // Token inválido - mas para admin, permitir acesso
-      if (isAdminRoute) {
-        setIsAuthenticated(true)
-      } else {
-        localStorage.removeItem('admin_token')
-        setIsAuthenticated(false)
-      }
+      // Token inválido
+      localStorage.removeItem('admin_token')
+      setIsAuthenticated(false)
     }
   }, [requireAuth, location.pathname])
 
@@ -86,11 +83,13 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
 
   // Redirecionar se não autenticado (exceto admin)
   if (!isAuthenticated && requireAuth) {
-    const isAdminRoute = location.pathname === '/admin'
+    const isAdminRoute = location.pathname.startsWith('/admin')
     if (!isAdminRoute) {
       return <Navigate to="/" replace />
     }
   }
+  
+  console.log('[ProtectedRoute] Rendering children, isAuthenticated:', isAuthenticated, 'path:', location.pathname)
 
   return <>{children}</>
 }

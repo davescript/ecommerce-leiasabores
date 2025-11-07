@@ -193,7 +193,7 @@ export function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute requireAuth={true}>
+              <ProtectedRoute requireAuth={false}>
                 <AdminLayout>
                   <AdminDashboard />
                 </AdminLayout>

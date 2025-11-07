@@ -41,6 +41,8 @@ export function AdminLayout({ children }: { children?: ReactNode }) {
   const location = useLocation()
   const { logout } = useAuth()
 
+  console.log('[AdminLayout] Rendering, path:', location.pathname, 'children:', !!children)
+
   const isActive = (path: string) => {
     if (path === '/admin') {
       return location.pathname === '/admin'
