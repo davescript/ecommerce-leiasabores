@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Search, Eye, Filter, Download, Calendar } from 'lucide-react'
+import { Search, Eye, Download } from 'lucide-react'
 import { DataTable } from '../../../components/admin/DataTable'
 import { Input } from '../../../components/ui/input'
 import { api } from '../../../lib/api-client'
@@ -21,7 +21,7 @@ export function OrdersList() {
   const [page, setPage] = useState(1)
   const limit = 20
 
-  const { data, isLoading, error } = useQuery<{ data: Order[]; total: number; page: number; limit: number }>({
+  const { data, isLoading } = useQuery<{ data: Order[]; total: number; page: number; limit: number }>({
     queryKey: ['admin-orders', page, search, statusFilter],
     queryFn: async () => {
       const response = await api.get('/admin/orders', { params: { page, limit, search, status: statusFilter } })

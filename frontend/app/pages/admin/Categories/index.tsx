@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Trash2, Image as ImageIcon, Folder } from 'lucide-react'
+import { Plus, Edit, Trash2, Folder } from 'lucide-react'
 import { DataTable } from '../../../components/admin/DataTable'
 import { Button } from '../../../components/Button'
 import { fetchCategories } from '../../../lib/api'

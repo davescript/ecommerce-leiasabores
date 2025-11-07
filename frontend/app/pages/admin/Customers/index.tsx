@@ -19,7 +19,7 @@ export function CustomersList() {
   const [page, setPage] = useState(1)
   const limit = 20
 
-  const { data, isLoading, error } = useQuery<{ data: Customer[]; total: number; page: number; limit: number }>({
+  const { data, isLoading } = useQuery<{ data: Customer[]; total: number; page: number; limit: number }>({
     queryKey: ['admin-customers', page, search],
     queryFn: async () => {
       const response = await api.get('/admin/customers', { params: { page, limit, search } })
