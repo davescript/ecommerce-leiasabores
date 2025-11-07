@@ -21,15 +21,39 @@ const FAQ = lazy(() => import('./pages/FAQ').then((m) => ({ default: m.FAQ })))
 const Envios = lazy(() => import('./pages/Envios').then((m) => ({ default: m.Envios })))
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })))
 
-// Admin
-const AdminLayout = lazy(() => import('./components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })))
-const AdminDashboard = lazy(() => import('./pages/admin/Dashboard').then((m) => ({ default: m.Dashboard })))
-const AdminProducts = lazy(() => import('./pages/admin/Products/index').then((m) => ({ default: m.ProductsList })))
-const AdminOrders = lazy(() => import('./pages/admin/Orders/index').then((m) => ({ default: m.OrdersList })))
-const AdminCategories = lazy(() => import('./pages/admin/Categories/index').then((m) => ({ default: m.CategoriesList })))
-const AdminCoupons = lazy(() => import('./pages/admin/Coupons/index').then((m) => ({ default: m.CouponsList })))
-const AdminCustomers = lazy(() => import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList })))
-const AdminSettings = lazy(() => import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings })))
+// Admin - Preload mais agressivo
+const AdminLayout = lazy(() => 
+  import('./components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout }))
+)
+const AdminDashboard = lazy(() => 
+  import('./pages/admin/Dashboard').then((m) => ({ default: m.Dashboard }))
+)
+const AdminProducts = lazy(() => 
+  import('./pages/admin/Products/index').then((m) => ({ default: m.ProductsList }))
+)
+const AdminOrders = lazy(() => 
+  import('./pages/admin/Orders/index').then((m) => ({ default: m.OrdersList }))
+)
+const AdminCategories = lazy(() => 
+  import('./pages/admin/Categories/index').then((m) => ({ default: m.CategoriesList }))
+)
+const AdminCoupons = lazy(() => 
+  import('./pages/admin/Coupons/index').then((m) => ({ default: m.CouponsList }))
+)
+const AdminCustomers = lazy(() => 
+  import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList }))
+)
+const AdminSettings = lazy(() => 
+  import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings }))
+)
+
+// Preload admin components quando detectar rota admin
+if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+  // Preload componentes admin imediatamente
+  import('./components/admin/AdminLayout')
+  import('./pages/admin/Products/index')
+  import('./components/admin/QuickProductsList')
+}
 
 function LayoutWrapper({ children, showHeaderFooter }: { children: React.ReactNode; showHeaderFooter: boolean }) {
   if (showHeaderFooter) {

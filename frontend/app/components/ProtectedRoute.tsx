@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
+import { InstantAdmin } from '@components/admin/InstantAdmin'
 import { useEffect, useState } from 'react'
 
 interface ProtectedRouteProps {
@@ -69,7 +70,12 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
     }
   }, [requireAuth, location.pathname])
 
-  // Mostrar loading enquanto verifica
+  // Para rotas admin, mostrar interface instantânea enquanto carrega
+  if (isAuthenticated === null && location.pathname.startsWith('/admin')) {
+    return <InstantAdmin />
+  }
+
+  // Mostrar loading enquanto verifica (outras rotas)
   if (isAuthenticated === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">

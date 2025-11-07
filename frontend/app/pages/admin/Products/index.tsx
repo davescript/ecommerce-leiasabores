@@ -25,6 +25,7 @@ import { Input } from '@components/ui/input'
 import { SafeImage } from '@components/SafeImage'
 import { PLACEHOLDER_SVG } from '@lib/image-placeholders'
 import { LoadingSpinner, TableLoadingSkeleton } from '@components/admin/LoadingSpinner'
+import { QuickProductsList } from '@components/admin/QuickProductsList'
 
 export function ProductsList() {
   const [search, setSearch] = useState('')
@@ -37,17 +38,25 @@ export function ProductsList() {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-products', search, statusFilter, categoryFilter],
-    queryFn: () => fetchProducts({ search, category: categoryFilter === 'all' ? undefined : categoryFilter, page: 1, limit: 50 }),
-    staleTime: 30000, // Cache por 30 segundos
-    refetchOnWindowFocus: false, // Não refetch ao focar janela
+    queryKey: ['admin-products'],
+    queryFn: () => fetchProducts({ page: 1, limit: 20 }), // Apenas 20 produtos iniciais
+    staleTime: Infinity, // Cache infinito - só atualiza manualmente
+    cacheTime: Infinity, // Manter em cache para sempre
+    refetchOnWindowFocus: false,
+    refetchOnMount: false, // Não refetch ao montar se já tem cache
+    refetchOnReconnect: false,
+    retry: false, // Não retry em caso de erro
   })
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
-    staleTime: 300000, // Cache por 5 minutos (categorias mudam pouco)
+    staleTime: Infinity, // Cache infinito
+    cacheTime: Infinity,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: false,
   })
 
   const createMutation = useMutation({
@@ -98,24 +107,37 @@ export function ProductsList() {
   const products = data?.data || []
   const categories = categoriesData || []
   
-  // Memoizar filtros para evitar recálculos desnecessários
+  // Filtros otimizados - aplicar apenas se necessário
   const filteredProducts = useMemo(() => {
+    if (!products.length) return []
+    
+    // Se não há filtros, retornar todos
+    if (!search && statusFilter === 'all' && categoryFilter === 'all') {
+      return products
+    }
+    
     return products.filter((p) => {
-      const matchesSearch = !search || 
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.description?.toLowerCase().includes(search.toLowerCase()) ||
-        p.category.toLowerCase().includes(search.toLowerCase())
+      if (search) {
+        const searchLower = search.toLowerCase()
+        if (!p.name.toLowerCase().includes(searchLower) && 
+            !p.description?.toLowerCase().includes(searchLower) &&
+            !p.category.toLowerCase().includes(searchLower)) {
+          return false
+        }
+      }
       
-      const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && p.inStock) ||
-        (statusFilter === 'inactive' && !p.inStock)
+      if (statusFilter !== 'all') {
+        if ((statusFilter === 'active' && !p.inStock) || 
+            (statusFilter === 'inactive' && p.inStock)) {
+          return false
+        }
+      }
       
-      const matchesCategory = 
-        categoryFilter === 'all' || 
-        p.category === categoryFilter
+      if (categoryFilter !== 'all' && p.category !== categoryFilter) {
+        return false
+      }
       
-      return matchesSearch && matchesStatus && matchesCategory
+      return true
     })
   }, [products, search, statusFilter, categoryFilter])
 
@@ -399,6 +421,24 @@ export function ProductsList() {
     } else {
       createMutation.mutate(data)
     }
+  }
+
+  // Se ainda está carregando, mostrar versão rápida
+  if (isLoading || !data) {
+    return (
+      <QuickProductsList
+        onCreateProduct={() => setShowForm(true)}
+        onEditProduct={(product) => {
+          setEditing(product)
+          setShowForm(true)
+        }}
+        onDeleteProduct={(id) => {
+          if (confirm('Excluir produto?')) {
+            deleteMutation.mutate(id)
+          }
+        }}
+      />
+    )
   }
 
   return (
