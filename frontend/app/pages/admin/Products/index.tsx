@@ -24,7 +24,6 @@ import { Input } from '@components/ui/input'
 import { SafeImage } from '@components/SafeImage'
 import { PLACEHOLDER_SVG } from '@lib/image-placeholders'
 import { LoadingSpinner } from '@components/admin/LoadingSpinner'
-import { QuickProductsList } from '@components/admin/QuickProductsList'
 
 export function ProductsList() {
   const [search, setSearch] = useState('')
