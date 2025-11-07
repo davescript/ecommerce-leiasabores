@@ -47,34 +47,47 @@ export function ProductsList() {
 
   const createMutation = useMutation({
     mutationFn: createProduct,
-    onSuccess: () => {
+    onSuccess: (newProduct) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] })
-      toast.success('Produto criado com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['products'] }) // Invalidar cache do frontend
+      toast.success(`Produto "${newProduct.name}" criado com sucesso!`)
       setShowForm(false)
       setEditing(null)
     },
-    onError: () => toast.error('Erro ao criar produto'),
+    onError: (error: any) => {
+      console.error('Erro ao criar produto:', error)
+      toast.error(error?.message || 'Erro ao criar produto')
+    },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: Partial<Product> }) =>
       updateProduct(id, body),
-    onSuccess: () => {
+    onSuccess: (updatedProduct) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] })
-      toast.success('Produto atualizado com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['products'] }) // Invalidar cache do frontend
+      queryClient.invalidateQueries({ queryKey: ['product', updatedProduct.id] }) // Invalidar produto específico
+      toast.success(`Produto "${updatedProduct.name}" atualizado com sucesso!`)
       setEditing(null)
       setShowForm(false)
     },
-    onError: () => toast.error('Erro ao atualizar produto'),
+    onError: (error: any) => {
+      console.error('Erro ao atualizar produto:', error)
+      toast.error(error?.message || 'Erro ao atualizar produto')
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] }) // Invalidar cache do frontend
       toast.success('Produto excluído com sucesso!')
     },
-    onError: () => toast.error('Erro ao excluir produto'),
+    onError: (error: any) => {
+      console.error('Erro ao excluir produto:', error)
+      toast.error(error?.message || 'Erro ao excluir produto')
+    },
   })
 
   const products = data?.data || []
@@ -145,6 +158,204 @@ export function ProductsList() {
     setSelectedProducts([])
   }
 
+  // Função para exportar produtos
+  const handleExport = () => {
+    if (filteredProducts.length === 0) {
+      toast.error('Nenhum produto para exportar')
+      return
+    }
+
+    // Preparar dados para CSV
+    const csvData = filteredProducts.map(product => ({
+      ID: product.id,
+      Nome: product.name,
+      'Descrição Curta': product.shortDescription || '',
+      Descrição: product.description || '',
+      Preço: product.price,
+      'Preço Original': product.originalPrice || '',
+      Categoria: product.category,
+      'Em Estoque': product.inStock ? 'Sim' : 'Não',
+      'Quantidade': product.stock || 0,
+      Tags: product.tags?.join(', ') || '',
+      Imagens: product.images?.join('; ') || '',
+      Avaliação: product.rating || 0,
+      'Número de Avaliações': product.reviewCount || 0,
+      'Data de Criação': product.createdAt || '',
+      'Última Atualização': product.updatedAt || ''
+    }))
+
+    // Converter para CSV
+    const headers = Object.keys(csvData[0])
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => 
+        headers.map(header => {
+          const value = row[header as keyof typeof row]
+          // Escapar aspas e vírgulas
+          return typeof value === 'string' && (value.includes(',') || value.includes('"'))
+            ? `"${value.replace(/"/g, '""')}"`
+            : value
+        }).join(',')
+      )
+    ].join('\n')
+
+    // Download do arquivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `produtos-leiasabores-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast.success(`${filteredProducts.length} produtos exportados com sucesso!`)
+  }
+
+  // Função para importar produtos
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.csv')) {
+      toast.error('Por favor, selecione um arquivo CSV')
+      return
+    }
+
+    try {
+      const text = await file.text()
+      const lines = text.split('\n').filter(line => line.trim())
+      
+      if (lines.length < 2) {
+        toast.error('Arquivo CSV deve ter pelo menos um cabeçalho e uma linha de dados')
+        return
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+      const requiredHeaders = ['Nome', 'Preço', 'Categoria']
+      
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
+      if (missingHeaders.length > 0) {
+        toast.error(`Cabeçalhos obrigatórios ausentes: ${missingHeaders.join(', ')}`)
+        return
+      }
+
+      let imported = 0
+      let errors = 0
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
+          const productData: any = {}
+
+          headers.forEach((header, index) => {
+            const value = values[index] || ''
+            switch (header) {
+              case 'Nome':
+                productData.name = value
+                break
+              case 'Descrição Curta':
+                productData.shortDescription = value
+                break
+              case 'Descrição':
+                productData.description = value
+                break
+              case 'Preço':
+                productData.price = parseFloat(value) || 0
+                break
+              case 'Preço Original':
+                if (value) productData.originalPrice = parseFloat(value)
+                break
+              case 'Categoria':
+                productData.category = value
+                break
+              case 'Em Estoque':
+                productData.inStock = value.toLowerCase() === 'sim' || value.toLowerCase() === 'true'
+                break
+              case 'Quantidade':
+                if (value) productData.stock = parseInt(value)
+                break
+              case 'Tags':
+                if (value) productData.tags = value.split(';').map(t => t.trim()).filter(Boolean)
+                break
+              case 'Imagens':
+                if (value) productData.images = value.split(';').map(i => i.trim()).filter(Boolean)
+                break
+            }
+          })
+
+          if (productData.name && productData.price && productData.category) {
+            await createMutation.mutateAsync(productData)
+            imported++
+          } else {
+            errors++
+          }
+        } catch (error) {
+          console.error(`Erro na linha ${i + 1}:`, error)
+          errors++
+        }
+      }
+
+      if (imported > 0) {
+        toast.success(`${imported} produtos importados com sucesso!`)
+      }
+      if (errors > 0) {
+        toast.warning(`${errors} produtos tiveram erros na importação`)
+      }
+
+    } catch (error) {
+      console.error('Erro ao importar arquivo:', error)
+      toast.error('Erro ao processar arquivo CSV')
+    }
+
+    // Limpar input
+    event.target.value = ''
+  }
+
+  // Função para baixar template CSV
+  const downloadTemplate = () => {
+    const templateData = [
+      {
+        Nome: 'Exemplo Produto',
+        'Descrição Curta': 'Descrição curta do produto',
+        Descrição: 'Descrição completa do produto com detalhes',
+        Preço: '19.99',
+        'Preço Original': '29.99',
+        Categoria: 'topos-de-bolo',
+        'Em Estoque': 'Sim',
+        Quantidade: '10',
+        Tags: 'tag1, tag2, tag3',
+        Imagens: 'https://exemplo.com/imagem1.jpg; https://exemplo.com/imagem2.jpg'
+      }
+    ]
+
+    const headers = Object.keys(templateData[0])
+    const csvContent = [
+      headers.join(','),
+      ...templateData.map(row => 
+        headers.map(header => {
+          const value = row[header as keyof typeof row]
+          return typeof value === 'string' && (value.includes(',') || value.includes('"'))
+            ? `"${value.replace(/"/g, '""')}"`
+            : value
+        }).join(',')
+      )
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'template-produtos-leiasabores.csv')
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast.success('Template CSV baixado com sucesso!')
+  }
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
@@ -208,14 +419,31 @@ export function ProductsList() {
         </div>
         
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+          <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             Exportar
           </Button>
-          <Button variant="outline" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
-            <Upload className="w-4 h-4 mr-2" />
-            Importar
-          </Button>
+          <div className="relative">
+            <Button variant="outline" onClick={() => document.getElementById('import-file')?.click()}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={downloadTemplate}
+              className="absolute -bottom-6 left-0 text-xs text-gray-500 hover:text-gray-700"
+            >
+              Baixar template
+            </Button>
+          </div>
+          <input
+            id="import-file"
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            onChange={handleImport}
+            className="hidden"
+          />
           <Button onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Novo Produto
@@ -598,49 +826,54 @@ export function ProductsList() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome
+                    Nome *
                   </label>
                   <Input
                     name="name"
                     defaultValue={editing?.name}
                     required
+                    placeholder="Ex: Topo de Bolo Personalizado"
                     className="w-full"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Descrição Curta
+                    Descrição Curta *
                   </label>
                   <Input
                     name="shortDescription"
                     defaultValue={editing?.shortDescription}
                     required
+                    placeholder="Ex: Topo elegante para bolos de aniversário"
                     className="w-full"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Descrição
+                    Descrição Completa *
                   </label>
                   <textarea
                     name="description"
                     defaultValue={editing?.description}
                     required
                     rows={4}
+                    placeholder="Descrição detalhada do produto, incluindo materiais, dimensões, cuidados especiais, etc."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Preço
+                      Preço (€) *
                     </label>
                     <Input
                       type="number"
                       step="0.01"
+                      min="0"
                       name="price"
                       defaultValue={editing?.price}
                       required
+                      placeholder="19.99"
                       className="w-full"
                     />
                   </div>
@@ -659,7 +892,7 @@ export function ProductsList() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Categoria
+                    Categoria *
                   </label>
                   <select
                     name="category"
@@ -674,6 +907,9 @@ export function ProductsList() {
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Esta categoria determinará onde o produto aparecerá no site
+                  </p>
                 </div>
                 
                 <div>
