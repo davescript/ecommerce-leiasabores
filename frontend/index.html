@@ -19,8 +19,8 @@
   <meta name="build-id" content="clean-68fbc62" />
   <meta name="force-reload" content="true" />
   <script>
-    // FORÇAR NO CACHE - Versão 6.0 (FORÇA CLOUDFLARE)
-    const VERSION = 'v6.0-force-cloudflare-' + Date.now()
+    // FORÇAR NO CACHE - Versão 7.0 ULTRA CLEAN (FORÇA CLOUDFLARE)
+    const VERSION = 'v7.0-ultra-clean-' + Date.now()
     console.log('[App] Loading version:', VERSION)
     
     // Limpar cache AGRESSIVAMENTE - FORÇAR ATUALIZAÇÃO IMEDIATA
@@ -61,7 +61,7 @@
         localStorage.setItem('app_version', VERSION)
         
         // 4. FORÇAR RELOAD IMEDIATO se versão antiga (especialmente para /admin)
-        if (oldVersion && (oldVersion.includes('v3.0') || oldVersion.includes('v4.0') || oldVersion.includes('v5.0') || !oldVersion.includes('v6.0'))) {
+        if (oldVersion && (oldVersion.includes('v3.0') || oldVersion.includes('v4.0') || oldVersion.includes('v5.0') || oldVersion.includes('v6.0') || !oldVersion.includes('v7.0'))) {
           console.log('[App] Versão muito antiga detectada, forçando reload IMEDIATO...')
           // Se estiver em /admin, forçar reload com cache buster
           if (window.location.pathname.startsWith('/admin')) {
@@ -83,13 +83,17 @@
     (function() {
       // Verificar se o HTML já foi carregado com bundle antigo
       const checkOldBundle = () => {
-        // Verificar scripts já carregados
+        // Verificar scripts já carregados - QUALQUER bundle antigo
         const scripts = Array.from(document.getElementsByTagName('script'))
-        const hasOldBundle = scripts.some(s => s.src && s.src.includes('index-CjNP-fx4.js'))
+        const hasOldBundle = scripts.some(s => s.src && (
+          s.src.includes('index-CjNP-fx4.js') || 
+          s.src.includes('index-V_laaqiY.js') ||
+          !s.src.includes('app-v7-clean')
+        ))
         
-        // Verificar se está em /admin e não tem versão v5.0
+        // Verificar se está em /admin e não tem versão v7.0
         const isAdmin = window.location.pathname.startsWith('/admin')
-        const hasOldVersion = !localStorage.getItem('app_version')?.includes('v5.0')
+        const hasOldVersion = !localStorage.getItem('app_version')?.includes('v7.0')
         
         if (hasOldBundle || (isAdmin && hasOldVersion)) {
           console.error('[FORCE RELOAD] Bundle antigo detectado! Forçando reload...')
