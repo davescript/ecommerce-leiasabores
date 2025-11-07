@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
   Plus, 
@@ -24,6 +24,7 @@ import { Button } from '@components/ui/button'
 import { Input } from '@components/ui/input'
 import { SafeImage } from '@components/SafeImage'
 import { PLACEHOLDER_SVG } from '@lib/image-placeholders'
+import { LoadingSpinner, TableLoadingSkeleton } from '@components/admin/LoadingSpinner'
 
 export function ProductsList() {
   const [search, setSearch] = useState('')
@@ -37,12 +38,16 @@ export function ProductsList() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products', search, statusFilter, categoryFilter],
-    queryFn: () => fetchProducts({ search, category: categoryFilter === 'all' ? undefined : categoryFilter, page: 1, limit: 100 }),
+    queryFn: () => fetchProducts({ search, category: categoryFilter === 'all' ? undefined : categoryFilter, page: 1, limit: 50 }),
+    staleTime: 30000, // Cache por 30 segundos
+    refetchOnWindowFocus: false, // Não refetch ao focar janela
   })
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
+    staleTime: 300000, // Cache por 5 minutos (categorias mudam pouco)
+    refetchOnWindowFocus: false,
   })
 
   const createMutation = useMutation({
@@ -93,43 +98,49 @@ export function ProductsList() {
   const products = data?.data || []
   const categories = categoriesData || []
   
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch = !search || 
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.description?.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase())
-    
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && p.inStock) ||
-      (statusFilter === 'inactive' && !p.inStock)
-    
-    const matchesCategory = 
-      categoryFilter === 'all' || 
-      p.category === categoryFilter
-    
-    return matchesSearch && matchesStatus && matchesCategory
-  })
+  // Memoizar filtros para evitar recálculos desnecessários
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesSearch = !search || 
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.description?.toLowerCase().includes(search.toLowerCase()) ||
+        p.category.toLowerCase().includes(search.toLowerCase())
+      
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && p.inStock) ||
+        (statusFilter === 'inactive' && !p.inStock)
+      
+      const matchesCategory = 
+        categoryFilter === 'all' || 
+        p.category === categoryFilter
+      
+      return matchesSearch && matchesStatus && matchesCategory
+    })
+  }, [products, search, statusFilter, categoryFilter])
 
-  const totalProducts = products.length
-  const activeProducts = products.filter(p => p.inStock).length
-  const totalValue = products.reduce((sum, p) => sum + p.price, 0)
+  // Memoizar estatísticas
+  const stats = useMemo(() => ({
+    totalProducts: products.length,
+    activeProducts: products.filter(p => p.inStock).length,
+    totalValue: products.reduce((sum, p) => sum + p.price, 0)
+  }), [products])
   
-  const handleSelectAll = () => {
+  const handleSelectAll = useCallback(() => {
     if (selectedProducts.length === filteredProducts.length) {
       setSelectedProducts([])
     } else {
       setSelectedProducts(filteredProducts.map(p => p.id))
     }
-  }
+  }, [selectedProducts.length, filteredProducts])
 
-  const handleSelectProduct = (productId: string) => {
+  const handleSelectProduct = useCallback((productId: string) => {
     setSelectedProducts(prev => 
       prev.includes(productId) 
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     )
-  }
+  }, [])
 
   const handleBulkAction = (action: 'activate' | 'deactivate' | 'delete') => {
     if (selectedProducts.length === 0) {
@@ -402,17 +413,17 @@ export function ProductsList() {
           <div className="flex gap-6 mt-3">
             <div className="flex items-center gap-2 text-sm">
               <Package className="w-4 h-4 text-blue-600" />
-              <span className="font-medium">{totalProducts}</span>
+              <span className="font-medium">{stats.totalProducts}</span>
               <span className="text-gray-500">produtos</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Eye className="w-4 h-4 text-green-600" />
-              <span className="font-medium">{activeProducts}</span>
+              <span className="font-medium">{stats.activeProducts}</span>
               <span className="text-gray-500">ativos</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <TrendingUp className="w-4 h-4 text-purple-600" />
-              <span className="font-medium">€{totalValue.toFixed(2)}</span>
+              <span className="font-medium">€{stats.totalValue.toFixed(2)}</span>
               <span className="text-gray-500">valor total</span>
             </div>
           </div>
@@ -568,8 +579,8 @@ export function ProductsList() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                      Carregando...
+                    <td colSpan={7} className="px-6 py-8">
+                      <LoadingSpinner text="Carregando produtos..." />
                     </td>
                   </tr>
                 ) : filteredProducts.length === 0 ? (
@@ -713,16 +724,13 @@ export function ProductsList() {
         ) : (
           /* Vista em grade */
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="border rounded-lg p-4 animate-pulse">
-                    <div className="w-full h-48 bg-gray-200 rounded mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                ))
-              ) : filteredProducts.length === 0 ? (
+            {isLoading ? (
+              <div className="py-12">
+                <LoadingSpinner size="lg" text="Carregando produtos..." />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProducts.length === 0 ? (
                 <div className="col-span-full flex flex-col items-center justify-center py-12">
                   <Package className="w-16 h-16 text-gray-300 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum produto encontrado</h3>
@@ -809,8 +817,8 @@ export function ProductsList() {
                     </div>
                   </div>
                 ))
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
