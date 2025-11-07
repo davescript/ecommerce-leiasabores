@@ -53,8 +53,8 @@ router.post('/', async (c) => {
     )
   }
 
-  // Validar formato básico da chave Stripe
-  if (!env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+  // Validar formato básico da chave Stripe (aceita secret keys 'sk_' e restricted keys 'rk_')
+  if (!env.STRIPE_SECRET_KEY.startsWith('sk_') && !env.STRIPE_SECRET_KEY.startsWith('rk_')) {
     console.error('❌ STRIPE_SECRET_KEY has invalid format:', env.STRIPE_SECRET_KEY.substring(0, 10) + '...')
     return c.json(
       { 

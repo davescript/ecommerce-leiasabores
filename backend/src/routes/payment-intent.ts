@@ -31,8 +31,8 @@ router.use('/*', validateRequestSize)
 router.post('/create', async (c) => {
   const env = c.env as unknown as WorkerBindings
   
-  // Validar Stripe key
-  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+  // Validar Stripe key (aceita secret keys 'sk_' e restricted keys 'rk_')
+  if (!env.STRIPE_SECRET_KEY || (!env.STRIPE_SECRET_KEY.startsWith('sk_') && !env.STRIPE_SECRET_KEY.startsWith('rk_'))) {
     return c.json({ 
       error: 'Erro de configuração no servidor de pagamento',
       debugId: 'missing_stripe_key'
