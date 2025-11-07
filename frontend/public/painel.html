@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Painel Admin - Leia Sabores</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+    .header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem; }
+    .header h1 { font-size: 1.5rem; font-weight: 600; color: #111827; }
+    .sidebar { position: fixed; left: 0; top: 73px; width: 256px; height: calc(100vh - 73px); background: white; border-right: 1px solid #e5e7eb; padding: 1rem; }
+    .main { margin-left: 256px; padding: 2rem; }
+    .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; margin: 0.25rem 0; border-radius: 0.5rem; color: #374151; text-decoration: none; transition: all 0.2s; }
+    .nav-item:hover { background: #f3f4f6; }
+    .nav-item.active { background: #dbeafe; color: #1d4ed8; font-weight: 500; }
+    .card { background: white; border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+    .stat { text-align: center; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: #111827; }
+    .stat-label { color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem; }
+    .btn { background: #3b82f6; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; }
+    .btn:hover { background: #2563eb; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    .table th, .table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    .table th { background: #f9fafb; font-weight: 600; color: #374151; }
+    .status { padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+    .status.active { background: #dcfce7; color: #166534; }
+    .status.inactive { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [currentPage, setCurrentPage] = useState('dashboard');
+      const [stats, setStats] = useState({
+        salesToday: 0,
+        salesWeek: 0,
+        salesMonth: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalCustomers: 0
+      });
+
+      useEffect(() => {
+        // Simular dados (você pode conectar à API real depois)
+        setStats({
+          salesToday: 0,
+          salesWeek: 0,
+          salesMonth: 0,
+          totalProducts: 12,
+          totalOrders: 45,
+          totalCustomers: 23
+        });
+      }, []);
+
+      const menuItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+        { id: 'products', label: 'Produtos', icon: '📦' },
+        { id: 'orders', label: 'Pedidos', icon: '🛒' },
+        { id: 'categories', label: 'Categorias', icon: '📁' },
+        { id: 'coupons', label: 'Cupons', icon: '🎫' },
+        { id: 'customers', label: 'Clientes', icon: '👥' },
+        { id: 'settings', label: 'Configurações', icon: '⚙️' }
+      ];
+
+      const renderContent = () => {
+        switch(currentPage) {
+          case 'dashboard':
+            return (
+              <div>
+                <h2 style={{marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: '600'}}>Dashboard</h2>
+                <div className="grid">
+                  <div className="card stat">
+                    <div className="stat-value">€{stats.salesToday.toFixed(2)}</div>
+                    <div className="stat-label">Vendas Hoje</div>
+                  </div>
+                  <div className="card stat">
+                    <div className="stat-value">€{stats.salesWeek.toFixed(2)}</div>
+                    <div className="stat-label">Vendas Esta Semana</div>
+                  </div>
+                  <div className="card stat">
+                    <div className="stat-value">€{stats.salesMonth.toFixed(2)}</div>
+                    <div className="stat-label">Vendas Este Mês</div>
+                  </div>
+                  <div className="card stat">
+                    <div className="stat-value">{stats.totalProducts}</div>
+                    <div className="stat-label">Total Produtos</div>
+                  </div>
+                  <div className="card stat">
+                    <div className="stat-value">{stats.totalOrders}</div>
+                    <div className="stat-label">Total Pedidos</div>
+                  </div>
+                  <div className="card stat">
+                    <div className="stat-value">{stats.totalCustomers}</div>
+                    <div className="stat-label">Total Clientes</div>
+                  </div>
+                </div>
+              </div>
+            );
+          case 'products':
+            return (
+              <div>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+                  <h2 style={{fontSize: '1.5rem', fontWeight: '600'}}>Produtos</h2>
+                  <button className="btn">+ Novo Produto</button>
+                </div>
+                <div className="card">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>Categoria</th>
+                        <th>Preço</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Topo Clássico Dourado</td>
+                        <td>Topos de Bolo</td>
+                        <td>€14.99</td>
+                        <td><span className="status active">Ativo</span></td>
+                        <td><button className="btn">Editar</button></td>
+                      </tr>
+                      <tr>
+                        <td>Topo Minnie</td>
+                        <td>Topos de Bolo</td>
+                        <td>€9.90</td>
+                        <td><span className="status active">Ativo</span></td>
+                        <td><button className="btn">Editar</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          default:
+            return (
+              <div className="card">
+                <h2 style={{marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600'}}>{menuItems.find(item => item.id === currentPage)?.label}</h2>
+                <p style={{color: '#6b7280'}}>Esta seção está em desenvolvimento.</p>
+              </div>
+            );
+        }
+      };
+
+      return (
+        <div>
+          <header className="header">
+            <h1>🍰 Painel Admin - Leia Sabores</h1>
+          </header>
+          
+          <nav className="sidebar">
+            {menuItems.map(item => (
+              <a
+                key={item.id}
+                href="#"
+                className={`nav-item ${currentPage === item.id ? 'active' : ''}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentPage(item.id);
+                }}
+              >
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </a>
+            ))}
+          </nav>
+
+          <main className="main">
+            {renderContent()}
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
