@@ -148,6 +148,15 @@ export function ProductsList() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    
+    // Processar tags
+    const tagsString = formData.get('tags') as string
+    const tags = tagsString ? tagsString.split(',').map(tag => tag.trim()).filter(Boolean) : []
+    
+    // Processar imagens
+    const imagesString = formData.get('images') as string
+    const images = imagesString ? imagesString.split('\n').map(url => url.trim()).filter(Boolean) : []
+    
     const data = {
       name: formData.get('name') as string,
       description: formData.get('description') as string,
@@ -157,6 +166,9 @@ export function ProductsList() {
         ? parseFloat(formData.get('originalPrice') as string)
         : undefined,
       category: formData.get('category') as string,
+      tags,
+      images,
+      stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : undefined,
       inStock: formData.get('inStock') === 'on',
     }
 
@@ -649,21 +661,71 @@ export function ProductsList() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Categoria
                   </label>
-                  <Input
+                  <select
                     name="category"
                     defaultValue={editing?.category}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Selecione uma categoria</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.slug}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tags (separadas por vírgula)
+                  </label>
+                  <Input
+                    name="tags"
+                    defaultValue={editing?.tags?.join(', ')}
+                    placeholder="ex: topo, dourado, premium"
                     className="w-full"
                   />
                 </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="inStock"
-                    defaultChecked={editing?.inStock ?? true}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    URLs das Imagens (uma por linha)
+                  </label>
+                  <textarea
+                    name="images"
+                    defaultValue={editing?.images?.join('\n')}
+                    placeholder="https://exemplo.com/imagem1.jpg&#10;https://exemplo.com/imagem2.jpg"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  <label className="ml-2 text-sm text-gray-700">Em Estoque</label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cole as URLs das imagens, uma por linha. A primeira será a imagem principal.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quantidade em Estoque
+                    </label>
+                    <Input
+                      type="number"
+                      name="stock"
+                      defaultValue={editing?.stock || 0}
+                      min="0"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex items-center pt-6">
+                    <input
+                      type="checkbox"
+                      name="inStock"
+                      defaultChecked={editing?.inStock ?? true}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label className="ml-2 text-sm text-gray-700">Produto Ativo</label>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
                   <Button
