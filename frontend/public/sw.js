@@ -1,72 +1,93 @@
-const CACHE_NAME = 'cake-decor-v1'
-const ASSETS_TO_CACHE = [
+// Service Worker para Leia Sabores
+// Versão: 2.0 - Atualizado para novo painel admin
+
+const CACHE_VERSION = 'v2.0-admin-panel'
+const CACHE_NAME = `leiasabores-${CACHE_VERSION}`
+
+// Arquivos para cache
+const CACHE_FILES = [
   '/',
   '/index.html',
-  '/manifest.json',
 ]
 
+// Instalar Service Worker
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing...', CACHE_VERSION)
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE)
+      console.log('[SW] Cache opened')
+      return cache.addAll(CACHE_FILES)
     })
   )
+  // Forçar ativação imediata
   self.skipWaiting()
 })
 
+// Ativar Service Worker
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating...', CACHE_VERSION)
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+        cacheNames.map((cacheName) => {
+          // Deletar caches antigos
+          if (cacheName !== CACHE_NAME && cacheName.startsWith('leiasabores-')) {
+            console.log('[SW] Deleting old cache:', cacheName)
+            return caches.delete(cacheName)
+          }
+        })
       )
     })
   )
-  self.clients.claim()
+  // Tomar controle imediato
+  return self.clients.claim()
 })
 
+// Interceptar requisições
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') {
-    return
-  }
-
-  // Ignore non-http(s) schemes (e.g., chrome-extension://) to prevent Cache API errors
-  const reqUrl = new URL(event.request.url)
-  if (reqUrl.protocol !== 'http:' && reqUrl.protocol !== 'https:') {
-    return
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response
-      }
-
-      return fetch(event.request).then((response) => {
-        // Cache only successful same-origin responses
-        const isOk = !!response && response.status === 200
-        const isSameOrigin = reqUrl.origin === self.location.origin
-        const isBasic = response.type === 'basic'
-        if (!isOk || !isSameOrigin || !isBasic) {
+  const url = new URL(event.request.url)
+  
+  // Sempre buscar do servidor para HTML (evitar cache de versões antigas)
+  if (event.request.destination === 'document' || url.pathname === '/admin') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cache apenas se a resposta for válida
+          if (response.status === 200) {
+            const responseClone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone)
+            })
+          }
           return response
-        }
-
-        const responseToCache = response.clone()
-        caches.open(CACHE_NAME).then((cache) => {
-          // Best-effort put into cache; ignore failures
-          cache.put(event.request, responseToCache).catch(() => {})
         })
+        .catch(() => {
+          // Fallback para cache se offline
+          return caches.match(event.request)
+        })
+    )
+    return
+  }
 
+  // Para outros recursos, usar estratégia network-first
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (response.status === 200) {
+          const responseClone = response.clone()
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone)
+          })
+        }
         return response
-      }).catch(() => {
-        return caches.match('/')
       })
-    })
+      .catch(() => {
+        return caches.match(event.request)
+      })
   )
 })
 
+// Mensagem para forçar atualização
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting()

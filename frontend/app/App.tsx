@@ -48,9 +48,15 @@ export function App() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
-        .register('/sw.js')
-        .then(() => {
+        .register('/sw.js', { updateViaCache: 'none' })
+        .then((registration) => {
           logger.debug('Service Worker registered successfully')
+          // Forçar atualização do service worker
+          registration.update()
+          // Notificar service worker para pular espera
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+          }
         })
         .catch((err) => {
           logger.debug('Service Worker registration failed (non-critical):', err)
