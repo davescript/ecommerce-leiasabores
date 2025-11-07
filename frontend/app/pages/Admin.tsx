@@ -120,9 +120,9 @@ export function Admin() {
         onSuccess: () => {
           toast.success('Produto atualizado com sucesso!')
         },
-        onError: (error: any) => {
-          const errorMessage = error?.response?.data?.error || error?.message || 'Erro desconhecido'
-          const status = error?.response?.status
+        onError: (error: unknown) => {
+          const errorMessage = (error as { response?: { data?: { error?: string }; status?: number }; message?: string })?.response?.data?.error || (error as { message?: string })?.message || 'Erro desconhecido'
+          const status = (error as { response?: { status?: number } })?.response?.status
           
           if (status === 401) {
             toast.error('Token inválido ou expirado. Configure um novo token JWT.')
@@ -146,9 +146,9 @@ export function Admin() {
         onSuccess: () => {
           toast.success('Produto criado com sucesso!')
         },
-        onError: (error: any) => {
-          const errorMessage = error?.response?.data?.error || error?.message || 'Erro desconhecido'
-          const status = error?.response?.status
+        onError: (error: unknown) => {
+          const errorMessage = (error as { response?: { data?: { error?: string }; status?: number }; message?: string })?.response?.data?.error || (error as { message?: string })?.message || 'Erro desconhecido'
+          const status = (error as { response?: { status?: number } })?.response?.status
           
           if (status === 401) {
             toast.error('Token inválido ou expirado. Configure um novo token JWT.')
