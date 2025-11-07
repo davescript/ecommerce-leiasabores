@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy, useEffect } from 'react'
 import { Header } from '@components/Header'
 import { Footer } from '@components/Footer'
@@ -30,15 +30,138 @@ const AdminCoupons = lazy(() => import('./pages/admin/Coupons/index').then((m) =
 const AdminCustomers = lazy(() => import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList })))
 const AdminSettings = lazy(() => import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings })))
 
-function AppContent() {
-  const location = useLocation()
-  const isAdminRoute = location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/legacy')
-
-  if (isAdminRoute) {
-    // Rotas admin não mostram Header/Footer
+function LayoutWrapper({ children, showHeaderFooter }: { children: React.ReactNode; showHeaderFooter: boolean }) {
+  if (showHeaderFooter) {
     return (
+      <div className="flex flex-col min-h-screen">
+        <AnnouncementBar />
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </div>
+    )
+  }
+  return <>{children}</>
+}
+
+export function App() {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then(() => {
+          logger.debug('Service Worker registered successfully')
+        })
+        .catch((err) => {
+          logger.debug('Service Worker registration failed (non-critical):', err)
+        })
+    }
+  }, [])
+
+  return (
+    <BrowserRouter>
       <Suspense fallback={<div className="py-20 text-center text-sm text-gray-500">A carregar…</div>}>
         <Routes>
+          {/* Rotas Públicas */}
+          <Route
+            path="/"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <Home />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/catalogo"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <Catalog />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/produto/:id"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <ProductDetail />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/carrinho"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <Cart />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <Checkout />
+              </LayoutWrapper>
+            }
+          />
+          <Route path="/pagamentos" element={<Navigate to="/checkout" replace />} />
+          <Route
+            path="/sucesso"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <CheckoutSuccess />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/sobre"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <About />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/contato"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <Contact />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/politica-privacidade"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <PrivacyPolicy />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/termos"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <Terms />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/faq"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <FAQ />
+              </LayoutWrapper>
+            }
+          />
+          <Route
+            path="/envios"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <Envios />
+              </LayoutWrapper>
+            }
+          />
+
+          {/* Rotas Admin - SEM Header/Footer */}
           <Route
             path="/admin"
             element={
@@ -109,67 +232,30 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-        </Routes>
-      </Suspense>
-    )
-  }
 
-  // Rotas públicas mostram Header/Footer
-  return (
-    <div className="flex flex-col min-h-screen">
-      <AnnouncementBar />
-      <Header />
-      <main className="flex-1">
-        <Suspense fallback={<div className="py-20 text-center text-sm text-gray-500">A carregar…</div>}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/catalogo" element={<Catalog />} />
-            <Route path="/produto/:id" element={<ProductDetail />} />
-            <Route path="/carrinho" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/pagamentos" element={<Navigate to="/checkout" replace />} />
-            <Route path="/sucesso" element={<CheckoutSuccess />} />
-            <Route path="/sobre" element={<About />} />
-            <Route path="/contato" element={<Contact />} />
-            <Route path="/politica-privacidade" element={<PrivacyPolicy />} />
-            <Route path="/termos" element={<Terms />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/envios" element={<Envios />} />
-            <Route
-              path="/admin/legacy"
-              element={
+          {/* Admin Legacy - COM Header/Footer */}
+          <Route
+            path="/admin/legacy"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
                 <ProtectedRoute requireAuth={true}>
                   <Admin />
                 </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
-  )
-}
+              </LayoutWrapper>
+            }
+          />
 
-export function App() {
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then(() => {
-          logger.debug('Service Worker registered successfully')
-        })
-        .catch((err) => {
-          // Service worker não é crítico, apenas log em dev
-          logger.debug('Service Worker registration failed (non-critical):', err)
-        })
-    }
-  }, [])
-
-  return (
-    <BrowserRouter>
-      <AppContent />
+          {/* 404 */}
+          <Route
+            path="*"
+            element={
+              <LayoutWrapper showHeaderFooter={true}>
+                <NotFound />
+              </LayoutWrapper>
+            }
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
