@@ -7,6 +7,7 @@ import type { Product } from '@types'
 import { Button } from './Button'
 import { formatPrice } from '@lib/utils'
 import { cn } from '@lib/utils'
+import { SafeImage } from './SafeImage'
 
 interface ProductCardProps {
   product: Product
@@ -14,8 +15,17 @@ interface ProductCardProps {
   className?: string
 }
 
+// Placeholder SVG local (não depende de URLs externas)
+const PLACEHOLDER_SVG = `data:image/svg+xml,${encodeURIComponent(`
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#f3f4f6"/>
+  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="64" fill="#9ca3af" text-anchor="middle" dominant-baseline="middle">
+    🍰
+  </text>
+</svg>
+`)}`
+
 export function ProductCard({ product, onAddToCart, className }: ProductCardProps) {
-  const placeholder = 'https://images.unsplash.com/photo-1530023367847-a683933f4177?auto=format&fit=crop&w=800&q=80'
 
   const imageSources = useMemo(() => {
     const unique = new Set<string>()
@@ -57,7 +67,7 @@ export function ProductCard({ product, onAddToCart, className }: ProductCardProp
 
   const resolvedSrc =
     usePlaceholder || imageSources.length === 0
-      ? placeholder
+      ? PLACEHOLDER_SVG
       : applyCacheBuster(imageSources[Math.min(imgIndex, imageSources.length - 1)])
 
   const primaryTag = product.tags?.find((tag) => tag && tag.length <= 18)
@@ -75,13 +85,11 @@ export function ProductCard({ product, onAddToCart, className }: ProductCardProp
     >
       <Link to={`/produto/${product.id}`} className="block">
         <div className="relative aspect-[4/5] overflow-hidden bg-light">
-          <img
+          <SafeImage
             src={resolvedSrc}
             alt={product.name}
             className="h-full w-full object-cover transition duration-500 sm:group-hover:scale-105"
             referrerPolicy="no-referrer"
-            decoding="async"
-            loading="lazy"
             onError={() => {
               setImgIndex((prev) => {
                 const next = prev + 1
