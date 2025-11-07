@@ -1,5 +1,4 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { InstantAdmin } from '@components/admin/InstantAdmin'
 import { useEffect, useState } from 'react'
 
 interface ProtectedRouteProps {
@@ -13,10 +12,16 @@ interface ProtectedRouteProps {
  * (o próprio painel tem campo para configurar o token)
  */
 export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const location = useLocation()
+  
+  // Inicializar estado baseado em requireAuth e rota admin
+  const isAdminRoute = location.pathname.startsWith('/admin')
+  const initialState = !requireAuth || isAdminRoute ? true : null
+  
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(initialState)
 
   useEffect(() => {
+    // Para rotas que não requerem autenticação, permitir acesso imediatamente
     if (!requireAuth) {
       setIsAuthenticated(true)
       return
@@ -70,9 +75,24 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
     }
   }, [requireAuth, location.pathname])
 
-  // Para rotas admin, mostrar interface instantânea enquanto carrega
-  if (isAuthenticated === null && location.pathname.startsWith('/admin')) {
-    return <InstantAdmin />
+  // Para rotas admin que não requerem auth, mostrar conteúdo imediatamente
+  // Não mostrar InstantAdmin - usar o layout correto
+  if (isAuthenticated === null && location.pathname.startsWith('/admin') && !requireAuth) {
+    // Retornar children diretamente para rotas admin sem requireAuth
+    return <>{children}</>
+  }
+
+  // Para rotas admin com requireAuth, mostrar loading apenas se ainda estiver verificando
+  if (isAuthenticated === null && location.pathname.startsWith('/admin') && requireAuth) {
+    // Mostrar loading simples, não InstantAdmin
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+          <p className="mt-4 text-sm text-gray-500">A carregar...</p>
+        </div>
+      </div>
+    )
   }
 
   // Mostrar loading enquanto verifica (outras rotas)
