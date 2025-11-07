@@ -331,7 +331,12 @@ export function ProductDetail() {
           </div>
         </div>
 
-        <section className="mt-10 sm:mt-12 md:mt-16 space-y-4 sm:space-y-6 rounded-2xl sm:rounded-3xl bg-light p-4 sm:p-6 md:p-8">
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mt-10 sm:mt-12 md:mt-16 space-y-4 sm:space-y-6 rounded-2xl sm:rounded-3xl bg-light p-4 sm:p-6 md:p-8"
+        >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-secondary">Avaliações de clientes</h2>

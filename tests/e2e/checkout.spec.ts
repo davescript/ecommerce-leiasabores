@@ -25,7 +25,7 @@ test.describe('Checkout Page', () => {
   })
 
   test('should display shipping form', async ({ page }) => {
-    const nameInput = page.locator('input[type="text"]').filter({ hasText: /nome|name/i }).first()
+    // const nameInput = page.locator('input[type="text"]').filter({ hasText: /nome|name/i }).first()
     const emailInput = page.locator('input[type="email"]').first()
     
     // At least email should be visible

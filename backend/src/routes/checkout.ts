@@ -17,6 +17,16 @@ import {
 } from '../utils/validation'
 import { validateRequestSize, rateLimit } from '../middleware/security'
 
+// Interface para erros do Stripe
+interface StripeErrorLike {
+  code?: string
+  statusCode?: number
+  type?: string
+  decline_code?: string
+  param?: string
+  message?: string
+}
+
 // Instância sem genéricos explícitos para evitar incompatibilidades de tipos do Env
 const router = new Hono()
 
@@ -494,7 +504,7 @@ router.post('/', async (c) => {
       // Capturar e logar detalhes completos do erro Stripe
       const stripeErrorMessage = stripeError instanceof Error ? stripeError.message : 'Unknown Stripe error'
       const stripeErrorType = stripeError instanceof Error ? stripeError.constructor.name : 'UnknownError'
-      const stripeErrorObj = stripeError as any
+      const stripeErrorObj = stripeError as StripeErrorLike
       
       console.error('❌ Stripe API error during session creation:', {
         errorType: stripeErrorType,
@@ -557,9 +567,10 @@ router.post('/', async (c) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorType = error instanceof Error ? error.constructor.name : 'UnknownError'
-    const stripeErrorCode = error instanceof Error && 'code' in error ? (error as any).code : undefined
-    const stripeStatusCode = error instanceof Error && 'status' in error ? (error as any).status : undefined
-    const stripeType = (error as any)?.type
+    const errorWithStripeProps = error as StripeErrorLike & Error
+    const stripeErrorCode = errorWithStripeProps?.code
+    const stripeStatusCode = errorWithStripeProps?.statusCode
+    const stripeType = errorWithStripeProps?.type
     const fullError = error instanceof Error ? error : new Error(String(error))
     
     console.error(`❌ Checkout error [${errorType}]: ${errorMessage}`)

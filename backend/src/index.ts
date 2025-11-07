@@ -453,6 +453,24 @@ app.get('/api/debug/config', (c) => {
 // Health simples em /health (mantido para compatibilidade)
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
+// Rota raiz com informações da API
+app.get('/', (c) => {
+  return c.json({
+    name: 'Leia Sabores API',
+    version: '1.0.0',
+    status: 'ok',
+    endpoints: {
+      health: '/health',
+      apiHealth: '/api/health',
+      debug: '/api/debug/config',
+      products: '/api/products',
+      checkout: '/api/checkout',
+      paymentIntent: '/api/payment-intent',
+    },
+    timestamp: new Date().toISOString(),
+  })
+})
+
 app.notFound((c) => {
   return c.json({ error: 'Not Found' }, 404)
 })

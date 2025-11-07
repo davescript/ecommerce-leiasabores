@@ -162,7 +162,7 @@ export function FAQ() {
                 </div>
 
                 <div className="space-y-3 sm:space-y-4">
-                  {category.questions.map((faq, qIndex) => {
+                  {category.questions.map((faq) => {
                     const currentIndex = questionIndex++
                     const isOpen = openIndex === currentIndex
 

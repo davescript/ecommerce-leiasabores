@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Home, Search, ArrowLeft } from 'lucide-react'
+import { Home, Search } from 'lucide-react'
 import { Button } from '@components/Button'
 import { useSEO } from '@hooks/useSEO'
 

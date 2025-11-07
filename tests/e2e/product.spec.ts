@@ -41,7 +41,7 @@ test.describe('Product Page', () => {
       // Check for success message or cart update
       await page.waitForTimeout(500)
       // Verify cart count updated or success message
-      const cartCount = page.locator('[data-testid="cart-count"], .cart-count, text=/[0-9]+/').first()
+      // const cartCount = page.locator('[data-testid="cart-count"], .cart-count, text=/[0-9]+/').first()
       // Just verify button was clicked (cart might be updated)
       expect(await addToCartButton.isVisible()).toBeTruthy()
     }

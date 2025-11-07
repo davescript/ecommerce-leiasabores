@@ -154,7 +154,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: frontend-build
-          path: frontend/dist/
+          path: dist/public/
           retention-days: 1
 
   build-backend:
@@ -220,7 +220,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: frontend-build
-          path: frontend/dist/
+          path: dist/public/
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
@@ -228,13 +228,13 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: leiasabores
-          directory: frontend/dist
+          directory: dist/public
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-backend:
     name: Deploy Backend (Cloudflare Workers)
     runs-on: ubuntu-latest
-    needs: [lint-and-format, type-check, unit-tests, build-backend]
+    needs: [lint-and-format, type-check, unit-tests]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
@@ -255,7 +255,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-          workingDirectory: backend
 
   cancel-old-runs:
     name: Cancel Old Runs

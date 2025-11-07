@@ -73,6 +73,10 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 // Mock IntersectionObserver
+interface IntersectionObserverConstructor {
+  new (callback: IntersectionObserverCallback, options?: IntersectionObserverInit): IntersectionObserver
+}
+
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
@@ -81,5 +85,5 @@ global.IntersectionObserver = class IntersectionObserver {
     return []
   }
   unobserve() {}
-} as any
+} as unknown as IntersectionObserverConstructor
 
