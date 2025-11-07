@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { ImageIcon } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 // Placeholder SVG como data URI (não depende de URLs externas)
 const PLACEHOLDER_SVG = `data:image/svg+xml,${encodeURIComponent(`
@@ -40,10 +39,12 @@ export function SafeImage({
   }
 
   // Reset quando src mudar
-  if (src && src !== imgSrc && !hasError) {
-    setImgSrc(src)
-    setHasError(false)
-  }
+  useEffect(() => {
+    if (src && src !== imgSrc && !hasError) {
+      setImgSrc(src)
+      setHasError(false)
+    }
+  }, [src, imgSrc, hasError])
 
   return (
     <img
