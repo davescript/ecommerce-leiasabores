@@ -8,22 +8,13 @@ import { Button } from './Button'
 import { formatPrice } from '@lib/utils'
 import { cn } from '@lib/utils'
 import { SafeImage } from './SafeImage'
+import { PLACEHOLDER_SVG } from '@lib/image-placeholders'
 
 interface ProductCardProps {
   product: Product
   onAddToCart?: (product: Product) => void
   className?: string
 }
-
-// Placeholder SVG local (não depende de URLs externas)
-const PLACEHOLDER_SVG = `data:image/svg+xml,${encodeURIComponent(`
-<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#f3f4f6"/>
-  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="64" fill="#9ca3af" text-anchor="middle" dominant-baseline="middle">
-    🍰
-  </text>
-</svg>
-`)}`
 
 export function ProductCard({ product, onAddToCart, className }: ProductCardProps) {
 

@@ -56,7 +56,7 @@ export function Cart() {
     )
   }
 
-  const firstImage = (item: CartItem) => item.product?.imageUrl || item.product?.images?.[0] || 'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=400&q=80'
+  const firstImage = (item: CartItem) => item.product?.imageUrl || item.product?.images?.[0] || PLACEHOLDER_SVG
 
   return (
     <div className="bg-white pb-20 sm:pb-0">

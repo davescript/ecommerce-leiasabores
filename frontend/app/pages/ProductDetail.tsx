@@ -11,11 +11,9 @@ import { useSEO } from '@hooks/useSEO'
 import { fetchProduct, fetchReviews } from '@lib/api'
 import { cn, formatPrice } from '@lib/utils'
 import { toast } from 'sonner'
+import { PLACEHOLDER_SVG } from '@lib/image-placeholders'
 
-const galleryFallback = [
-  'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=900&q=80',
-  'https://images.unsplash.com/photo-1545239351-ef35f43d514b?auto=format&fit=crop&w=900&q=80',
-]
+const galleryFallback = [PLACEHOLDER_SVG, PLACEHOLDER_SVG]
 
 export function ProductDetail() {
   const { id } = useParams()

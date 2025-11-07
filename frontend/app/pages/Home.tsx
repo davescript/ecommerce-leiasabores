@@ -11,8 +11,9 @@ import { useCart } from '@hooks/useCart'
 import { useSEO } from '@hooks/useSEO'
 import { fetchProducts } from '@lib/api'
 import type { Product } from '@types'
+import { PLACEHOLDER_HERO, PLACEHOLDER_CATEGORY } from '@lib/image-placeholders'
 
-const heroImage = 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=1000&q=80'
+const heroImage = PLACEHOLDER_HERO
 
 const fallbackProducts: Product[] = [
   {
@@ -52,10 +53,10 @@ const fallbackProducts: Product[] = [
 ]
 
 const categories = [
-  { id: '1', name: 'Topos Personalizados', slug: 'topos-de-bolo', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80', description: 'Produção em 24h' },
-  { id: '2', name: 'Bolos Temáticos', slug: 'bolos-tematicos', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80', description: 'Sabores exclusivos' },
-  { id: '3', name: 'Doces & Mesa', slug: 'mesa-doce', image: 'https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?auto=format&fit=crop&w=800&q=80', description: 'Macarons, brigadeiros' },
-  { id: '4', name: 'Kits Completo', slug: 'kits', image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80', description: 'Tudo para a festa' },
+  { id: '1', name: 'Topos Personalizados', slug: 'topos-de-bolo', image: PLACEHOLDER_CATEGORY, description: 'Produção em 24h' },
+  { id: '2', name: 'Bolos Temáticos', slug: 'bolos-tematicos', image: PLACEHOLDER_CATEGORY, description: 'Sabores exclusivos' },
+  { id: '3', name: 'Doces & Mesa', slug: 'mesa-doce', image: PLACEHOLDER_CATEGORY, description: 'Macarons, brigadeiros' },
+  { id: '4', name: 'Kits Completo', slug: 'kits', image: PLACEHOLDER_CATEGORY, description: 'Tudo para a festa' },
 ]
 
 const testimonials = [

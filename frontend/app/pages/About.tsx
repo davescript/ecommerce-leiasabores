@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Users, Award, Truck, Heart, Sparkles, Leaf, HeartHandshake } from 'lucide-react'
 import { useSEO } from '@hooks/useSEO'
+import { PLACEHOLDER_TEAM, PLACEHOLDER_HERO } from '@lib/image-placeholders'
 
 const highlights = [
   { icon: Heart, title: 'Feito com carinho', text: 'Design exclusivo para cada pedido, com foco no detalhe artesanal.' },
@@ -16,9 +17,9 @@ const values = [
 ]
 
 const team = [
-  { name: 'Léa Andrade', role: 'Fundadora e Chef Criativa', bio: 'Transforma memórias em arte com 15 anos de experiência em confeitaria personalizada.', image: 'https://images.unsplash.com/photo-1549989476-69a92fa57c36?auto=format&fit=crop&w=600&q=80' },
-  { name: 'David Sousa', role: 'Diretor de Operações', bio: 'Garante que cada encomenda seja entregue com precisão e dentro do prazo.', image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80' },
-  { name: 'Ana Figueiredo', role: 'Designer de Topos', bio: 'Especialista em ilustrações personalizadas para qualquer tipo de celebração.', image: 'https://images.unsplash.com/photo-1530023367847-a683933f4177?auto=format&fit=crop&w=600&q=80' },
+  { name: 'Léa Andrade', role: 'Fundadora e Chef Criativa', bio: 'Transforma memórias em arte com 15 anos de experiência em confeitaria personalizada.', image: PLACEHOLDER_TEAM },
+  { name: 'David Sousa', role: 'Diretor de Operações', bio: 'Garante que cada encomenda seja entregue com precisão e dentro do prazo.', image: PLACEHOLDER_TEAM },
+  { name: 'Ana Figueiredo', role: 'Designer de Topos', bio: 'Especialista em ilustrações personalizadas para qualquer tipo de celebração.', image: PLACEHOLDER_TEAM },
 ]
 
 export function About() {
@@ -67,7 +68,7 @@ export function About() {
             className="relative overflow-hidden rounded-[32px] border border-white shadow-[0_32px_60px_-30px_rgba(255,99,132,0.45)]"
           >
             <img
-              src="https://images.unsplash.com/photo-1529257414770-1960ab1a74d9?auto=format&fit=crop&w=900&q=80"
+              src={PLACEHOLDER_HERO}
               alt="Atelier Leia Sabores"
               className="h-full w-full object-cover"
               loading="lazy"

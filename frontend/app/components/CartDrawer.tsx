@@ -7,6 +7,7 @@ import { ScrollArea } from '@components/ui/scroll-area'
 import { Separator } from '@components/ui/separator'
 import { useCart } from '@hooks/useCart'
 import { formatPrice } from '@lib/utils'
+import { PLACEHOLDER_SVG } from '@lib/image-placeholders'
 
 interface CartDrawerProps {
   children: React.ReactNode
@@ -54,7 +55,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
                       >
                         <div className="h-20 w-20 overflow-hidden rounded-lg bg-light">
                           <img
-                            src={item.product?.imageUrl || item.product?.images?.[0] || 'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=400&q=80'}
+                            src={item.product?.imageUrl || item.product?.images?.[0] || PLACEHOLDER_SVG}
                             alt={item.product?.name}
                             className="h-full w-full object-cover"
                             loading="lazy"
