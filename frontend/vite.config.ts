@@ -24,10 +24,10 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        // FORÇAR NOMES ÚNICOS PARA QUEBRAR CACHE CLOUDFLARE
-        entryFileNames: () => `assets/app-v7-clean-${Date.now()}-[hash].js`,
-        chunkFileNames: () => `assets/chunk-v7-clean-${Date.now()}-[hash].js`,
-        assetFileNames: () => `assets/[name]-v7-clean-${Date.now()}-[hash].[ext]`,
+        // NOMES SIMPLES PARA CLOUDFLARE PAGES
+        entryFileNames: `assets/app-v7-final-[hash].js`,
+        chunkFileNames: `assets/chunk-v7-final-[hash].js`,
+        assetFileNames: `assets/[name]-v7-final-[hash].[ext]`,
         manualChunks: undefined,
       },
     },

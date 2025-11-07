@@ -89,7 +89,7 @@
         const hasOldBundle = scripts.some(s => s.src && (
           s.src.includes('index-CjNP-fx4.js') || 
           s.src.includes('index-V_laaqiY.js') ||
-          !s.src.includes('app-v7-clean')
+          (!s.src.includes('app-v7-final') && !s.src.includes('app-v7-clean'))
         ))
         
         // Verificar se está em /admin e não tem versão v7.0
