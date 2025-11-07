@@ -18,7 +18,7 @@ orders.get('/', authMiddleware, adminMiddleware, async (c) => {
     let query = db.select().from(ordersTable)
 
     if (status && status !== 'all') {
-      query = query.where(eq(ordersTable.status, status)) as any
+      query = query.where(eq(ordersTable.status, status)) as typeof query
     }
 
     const allOrders = await query.orderBy(desc(ordersTable.createdAt)).all()
@@ -31,7 +31,7 @@ orders.get('/', authMiddleware, adminMiddleware, async (c) => {
       data: paginatedOrders.map((order) => ({
         id: order.id,
         email: order.email,
-        customerName: (order as any).customerName || null,
+        customerName: 'customerName' in order ? (order as { customerName?: string }).customerName || null : null,
         total: order.total,
         status: order.status,
         createdAt: order.createdAt,

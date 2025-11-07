@@ -15,8 +15,16 @@ export function CustomersList() {
     },
   })
 
-  const customers = data?.data || []
-  const filteredCustomers = customers.filter((customer: any) => {
+  interface Customer {
+    id?: string
+    email?: string
+    name?: string
+    orderCount?: number
+    totalSpent?: number
+  }
+
+  const customers = (data?.data || []) as Customer[]
+  const filteredCustomers = customers.filter((customer: Customer) => {
     if (!search) return true
     const searchLower = search.toLowerCase()
     return (
@@ -80,7 +88,7 @@ export function CustomersList() {
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((customer: any) => (
+                filteredCustomers.map((customer: Customer) => (
                   <tr key={customer.id || customer.email} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">

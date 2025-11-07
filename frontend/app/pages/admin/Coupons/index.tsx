@@ -53,7 +53,7 @@ export function CouponsList() {
                   </td>
                 </tr>
               ) : (
-                coupons.map((coupon: any) => (
+                coupons.map((coupon: { id?: string; code?: string; type?: string; value?: string | number }) => (
                   <tr key={coupon.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
