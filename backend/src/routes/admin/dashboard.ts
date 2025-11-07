@@ -148,7 +148,7 @@ dashboard.get('/', authMiddleware, adminMiddleware, async (c) => {
       lowStockProducts: lowStockCount,
       recentOrders: recentOrders.map((order) => ({
         id: order.id,
-        customer: (order as any).customerName || order.email || 'Cliente',
+        customer: (order as { customerName?: string }).customerName || order.email || 'Cliente',
         total: order.total,
         status: order.status || 'pending',
         date: order.createdAt,

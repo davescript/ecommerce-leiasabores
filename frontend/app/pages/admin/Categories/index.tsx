@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Image as ImageIcon } from 'lucide-react'
 import { DataTable } from '../../../components/admin/DataTable'
@@ -14,7 +13,7 @@ interface Category {
   image?: string | null
   description?: string | null
   parentId?: string | null
-  displayOrder: number
+  displayOrder?: number
 }
 
 async function deleteCategory(id: string) {
@@ -24,7 +23,6 @@ async function deleteCategory(id: string) {
 
 export function CategoriesList() {
   const qc = useQueryClient()
-  const [editing, setEditing] = useState<Category | null>(null)
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ['admin-categories'],
@@ -114,7 +112,10 @@ export function CategoriesList() {
             render: (category: Category) => (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setEditing(category)}
+                  onClick={() => {
+                    // TODO: Implementar edição
+                    console.log('Edit category:', category.id)
+                  }}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                 >
                   <Edit className="w-4 h-4" />

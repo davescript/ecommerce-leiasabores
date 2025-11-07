@@ -1,6 +1,4 @@
 import { Hono } from 'hono'
-import { getDb, dbSchema } from '../../lib/db'
-import { eq } from 'drizzle-orm'
 import type { WorkerBindings } from '../../types/bindings'
 import { authMiddleware, adminMiddleware, JWTPayload } from '../../middleware/auth'
 

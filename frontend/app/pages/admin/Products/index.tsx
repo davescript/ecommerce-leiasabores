@@ -39,6 +39,7 @@ export function ProductsList() {
 
   const duplicateMutation = useMutation({
     mutationFn: async (product: Product) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { id, createdAt, updatedAt, ...rest } = product
       const newProduct = {
         ...rest,

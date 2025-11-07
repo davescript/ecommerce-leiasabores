@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { getDb, dbSchema } from '../../lib/db'
-import { desc, eq, and, gte, lte } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import type { WorkerBindings } from '../../types/bindings'
 import { authMiddleware, adminMiddleware, JWTPayload } from '../../middleware/auth'
 
@@ -74,7 +74,7 @@ orders.put('/:id/status', authMiddleware, adminMiddleware, async (c) => {
   const id = c.req.param('id')
 
   try {
-    const body = await c.req.json<{ status: string }>()
+    const body = await c.req.json<{ status: string }>() as { status: string }
 
     await db
       .update(ordersTable)

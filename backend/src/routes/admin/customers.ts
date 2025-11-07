@@ -64,7 +64,7 @@ customers.get('/:id', authMiddleware, adminMiddleware, async (c) => {
     return c.json({
       id,
       email: id,
-      name: (customerOrders[0] as any).customerName || 'Cliente',
+      name: (customerOrders[0] as { customerName?: string }).customerName || 'Cliente',
       totalSpent,
       orderCount: customerOrders.length,
       orders: customerOrders,

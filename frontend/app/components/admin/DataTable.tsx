@@ -8,7 +8,7 @@ interface Column<T> {
   sortable?: boolean
 }
 
-interface DataTableProps<T> {
+interface DataTableProps<T extends Record<string, unknown>> {
   columns: Column<T>[]
   data: T[]
   loading?: boolean

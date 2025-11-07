@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Search, Filter, Eye } from 'lucide-react'
+import { Search, Eye } from 'lucide-react'
 import { DataTable } from '../../../components/admin/DataTable'
 import { Input } from '../../../components/ui/input'
 import { api } from '../../../lib/api-client'
