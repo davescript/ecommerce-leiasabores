@@ -21,6 +21,14 @@ const FAQ = lazy(() => import('./pages/FAQ').then((m) => ({ default: m.FAQ })))
 const Envios = lazy(() => import('./pages/Envios').then((m) => ({ default: m.Envios })))
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })))
 const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })))
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard').then((m) => ({ default: m.Dashboard })))
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })))
+const AdminProducts = lazy(() => import('./pages/admin/Products/index').then((m) => ({ default: m.ProductsList })))
+const AdminOrders = lazy(() => import('./pages/admin/Orders/index').then((m) => ({ default: m.OrdersList })))
+const AdminCategories = lazy(() => import('./pages/admin/Categories/index').then((m) => ({ default: m.CategoriesList })))
+const AdminCoupons = lazy(() => import('./pages/admin/Coupons/index').then((m) => ({ default: m.CouponsList })))
+const AdminCustomers = lazy(() => import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList })))
+const AdminSettings = lazy(() => import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings })))
 
 export function App() {
   useEffect(() => {
@@ -60,6 +68,76 @@ export function App() {
               <Route path="/envios" element={<Envios />} />
               <Route
                 path="/admin"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <AdminLayout>
+                      <AdminDashboard />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <AdminLayout>
+                      <AdminProducts />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/orders"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <AdminLayout>
+                      <AdminOrders />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/categories"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <AdminLayout>
+                      <AdminCategories />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/coupons"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <AdminLayout>
+                      <AdminCoupons />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/customers"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <AdminLayout>
+                      <AdminCustomers />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <AdminLayout>
+                      <AdminSettings />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/legacy"
                 element={
                   <ProtectedRoute requireAuth={true}>
                     <Admin />

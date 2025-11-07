@@ -14,6 +14,7 @@ export const products = sqliteTable('products', {
   rating: real('rating').default(0),
   reviewCount: integer('review_count').default(0),
   inStock: integer('in_stock', { mode: 'boolean' }).default(true),
+  stock: integer('stock'), // Quantidade em estoque
   tags: text('tags', { mode: 'json' }).$type<string[] | null>(),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
@@ -45,6 +46,7 @@ export const orders = sqliteTable('orders', {
   userId: text('user_id').notNull(),
   stripeSessionId: text('stripe_session_id').notNull(),
   email: text('email').notNull(),
+  customerName: text('customer_name'), // Nome do cliente
   total: real('total').notNull(),
   subtotal: real('subtotal').notNull(),
   tax: real('tax').notNull(),

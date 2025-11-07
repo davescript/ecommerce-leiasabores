@@ -5,6 +5,10 @@ import { eq } from 'drizzle-orm'
 import type { WorkerBindings } from '../types/bindings'
 import { adminMiddleware, authMiddleware, JWTPayload } from '../middleware/auth'
 import syncR2Routes from './sync-r2'
+import dashboardRoutes from './admin/dashboard'
+import ordersRoutes from './admin/orders'
+import couponsRoutes from './admin/coupons'
+import customersRoutes from './admin/customers'
 
 const admin = new Hono<{ Bindings: WorkerBindings; Variables: { user?: JWTPayload } }>()
 
@@ -209,7 +213,27 @@ admin.post('/seed-teste-1eur', async (c) => {
 })
 
 // ------------------------------------------------------
-// 🧩 4. SYNC AUTOMÁTICO COM R2
+// 🧩 4. DASHBOARD
+// ------------------------------------------------------
+admin.route('/dashboard', dashboardRoutes)
+
+// ------------------------------------------------------
+// 🧩 5. PEDIDOS
+// ------------------------------------------------------
+admin.route('/orders', ordersRoutes)
+
+// ------------------------------------------------------
+// 🧩 6. CUPONS
+// ------------------------------------------------------
+admin.route('/coupons', couponsRoutes)
+
+// ------------------------------------------------------
+// 🧩 7. CLIENTES
+// ------------------------------------------------------
+admin.route('/customers', customersRoutes)
+
+// ------------------------------------------------------
+// 🧩 8. SYNC AUTOMÁTICO COM R2
 // ------------------------------------------------------
 admin.route('/', syncR2Routes)
 
