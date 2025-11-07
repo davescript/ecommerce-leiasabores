@@ -1,26 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Trash2, Copy, Tag, Calendar, Users } from 'lucide-react'
-import { DataTable } from '../../../components/admin/DataTable'
-import { Button } from '../../../components/Button'
-import { api } from '../../../lib/api-client'
-import { toast } from 'sonner'
-
-interface Coupon {
-  id: string
-  code: string
-  type: 'percentage' | 'fixed' | 'free_shipping'
-  value: number
-  minPurchase?: number
-  expiresAt?: string
-  maxUses?: number
-  uses: number
-  createdAt: string
-}
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@lib/api-client'
+import { Ticket } from 'lucide-react'
 
 export function CouponsList() {
-  const qc = useQueryClient()
-
-  const { data: coupons, isLoading } = useQuery<{ data: Coupon[]; total: number }>({
+  const { data, isLoading } = useQuery({
     queryKey: ['admin-coupons'],
     queryFn: async () => {
       const response = await api.get('/admin/coupons')
@@ -28,153 +11,75 @@ export function CouponsList() {
     },
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.delete(`/admin/coupons/${id}`)
-      return response.data
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-coupons'] })
-      toast.success('Cupom deletado com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao deletar cupom.')
-    },
-  })
-
-  const handleDelete = (id: string) => {
-    if (confirm('Tem certeza que deseja deletar este cupom?')) {
-      deleteMutation.mutate(id)
-    }
-  }
-
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code)
-    toast.success('Código copiado!')
-  }
-
-  const formatValue = (coupon: Coupon) => {
-    if (coupon.type === 'percentage') {
-      return `${coupon.value}%`
-    }
-    if (coupon.type === 'free_shipping') {
-      return 'Frete Grátis'
-    }
-    return `€${coupon.value.toFixed(2)}`
-  }
-
-  const columns = [
-    { 
-      key: 'code', 
-      label: 'Código',
-      render: (coupon: Coupon) => (
-        <div className="flex items-center gap-2">
-          <Tag className="w-4 h-4 text-primary" />
-          <span className="font-mono font-semibold text-gray-900">{coupon.code}</span>
-          <button
-            onClick={() => handleCopy(coupon.code)}
-            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-            title="Copiar código"
-          >
-            <Copy className="w-3 h-3" />
-          </button>
-        </div>
-      )
-    },
-    { 
-      key: 'type', 
-      label: 'Tipo',
-      render: (coupon: Coupon) => (
-        <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-          {coupon.type === 'percentage' ? 'Percentual' : 
-           coupon.type === 'fixed' ? 'Valor Fixo' : 
-           'Frete Grátis'}
-        </span>
-      )
-    },
-    { 
-      key: 'value', 
-      label: 'Desconto',
-      render: (coupon: Coupon) => (
-        <span className="font-semibold text-gray-900">{formatValue(coupon)}</span>
-      )
-    },
-    { 
-      key: 'uses', 
-      label: 'Usos',
-      render: (coupon: Coupon) => (
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-gray-400" />
-          <span className="font-medium">{coupon.uses}</span>
-          {coupon.maxUses && (
-            <span className="text-sm text-gray-500">/ {coupon.maxUses}</span>
-          )}
-        </div>
-      )
-    },
-    { 
-      key: 'expiresAt', 
-      label: 'Expira Em',
-      render: (coupon: Coupon) => (
-        coupon.expiresAt ? (
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Calendar className="w-4 h-4" />
-            {new Date(coupon.expiresAt).toLocaleDateString('pt-PT')}
-          </div>
-        ) : (
-          <span className="text-sm text-gray-400">Nunca</span>
-        )
-      )
-    },
-    {
-      key: 'actions',
-      label: '',
-      render: (coupon: Coupon) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              // TODO: Implementar edição
-              toast.info('Edição de cupom em breve')
-            }}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Editar"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => handleDelete(coupon.id)}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Deletar"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
-    },
-  ]
+  const coupons = data?.data || []
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Cupons</h1>
-          <p className="text-gray-600 mt-1">Crie e gerencie cupons de desconto</p>
-        </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" /> Novo Cupom
-        </Button>
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Cupons</h2>
+        <p className="text-gray-600 mt-1">Gerencie seus cupons de desconto</p>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={coupons?.data || []}
-          loading={isLoading}
-          emptyMessage="Nenhum cupom encontrado."
-        />
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Código
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tipo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Valor
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                    Carregando...
+                  </td>
+                </tr>
+              ) : coupons.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                    Nenhum cupom encontrado
+                  </td>
+                </tr>
+              ) : (
+                coupons.map((coupon: any) => (
+                  <tr key={coupon.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Ticket className="w-5 h-5 text-gray-400" />
+                        <div className="text-sm font-medium text-gray-900">{coupon.code}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {coupon.type || '—'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {coupon.value || '—'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Ativo
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
 }
+

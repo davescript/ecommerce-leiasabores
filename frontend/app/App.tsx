@@ -20,16 +20,16 @@ const Terms = lazy(() => import('./pages/Terms').then((m) => ({ default: m.Terms
 const FAQ = lazy(() => import('./pages/FAQ').then((m) => ({ default: m.FAQ })))
 const Envios = lazy(() => import('./pages/Envios').then((m) => ({ default: m.Envios })))
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })))
-const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })))
-const AdminDashboard = lazy(() => import('./pages/admin/Dashboard').then((m) => ({ default: m.Dashboard })))
+
+// Admin
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })))
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard').then((m) => ({ default: m.Dashboard })))
 const AdminProducts = lazy(() => import('./pages/admin/Products/index').then((m) => ({ default: m.ProductsList })))
 const AdminOrders = lazy(() => import('./pages/admin/Orders/index').then((m) => ({ default: m.OrdersList })))
 const AdminCategories = lazy(() => import('./pages/admin/Categories/index').then((m) => ({ default: m.CategoriesList })))
 const AdminCoupons = lazy(() => import('./pages/admin/Coupons/index').then((m) => ({ default: m.CouponsList })))
 const AdminCustomers = lazy(() => import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList })))
 const AdminSettings = lazy(() => import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings })))
-const TestAdmin = lazy(() => import('./pages/admin/TestAdmin').then((m) => ({ default: m.TestAdmin })))
 
 function LayoutWrapper({ children, showHeaderFooter }: { children: React.ReactNode; showHeaderFooter: boolean }) {
   if (showHeaderFooter) {
@@ -190,13 +190,7 @@ export function App() {
             }
           />
 
-          {/* Rota de Teste - SEM Header/Footer */}
-          <Route
-            path="/admin/test"
-            element={<TestAdmin />}
-          />
-
-          {/* Rotas Admin - SEM Header/Footer */}
+          {/* Rotas Admin */}
           <Route
             path="/admin"
             element={
@@ -265,18 +259,6 @@ export function App() {
                   <AdminSettings />
                 </AdminLayout>
               </ProtectedRoute>
-            }
-          />
-
-          {/* Admin Legacy - COM Header/Footer */}
-          <Route
-            path="/admin/legacy"
-            element={
-              <LayoutWrapper showHeaderFooter={true}>
-                <ProtectedRoute requireAuth={true}>
-                  <Admin />
-                </ProtectedRoute>
-              </LayoutWrapper>
             }
           />
 
