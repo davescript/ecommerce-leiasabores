@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { logger } from '@lib/logger'
 import type { Cart, CartItem, Product } from '@types'
 
 // Valid UUID v4 pattern - used to validate product IDs
@@ -102,7 +103,7 @@ export const useCartStore = create<CartStore>()(
           if (validItems.length !== state.items.length) {
             // Log removed items for debugging
             const removedCount = state.items.length - validItems.length
-            console.warn(`[Cart Migration] Removed ${removedCount} invalid product ID(s) from cart`)
+            logger.warn(`[Cart Migration] Removed ${removedCount} invalid product ID(s) from cart`)
             
             state.items = validItems
           }

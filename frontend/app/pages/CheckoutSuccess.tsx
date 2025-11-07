@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Package, Mail, CalendarDays, Truck, Sparkles } from 'lucide-react'
+import { CheckCircle2, Package, Mail, CalendarDays, Truck, Sparkles, AlertCircle } from 'lucide-react'
 import { Button } from '@components/Button'
 import { Skeleton } from '@components/ui/skeleton'
 import { useCart } from '@hooks/useCart'
@@ -20,16 +20,36 @@ export function CheckoutSuccess() {
   const [searchParams] = useSearchParams()
   const { clearCart } = useCart()
   const sessionId = searchParams.get('session_id')
-  const [orderNumber] = useState(() => `LS-${Date.now().toString().slice(-6)}`)
+  const orderId = searchParams.get('orderId')
+  const paymentIntentId = searchParams.get('paymentIntentId')
+  const [orderNumber] = useState(() => {
+    // Tentar usar orderId se disponível, senão gerar número
+    if (orderId) return orderId
+    return `LS-${Date.now().toString().slice(-6)}`
+  })
 
   useEffect(() => {
     clearCart()
   }, [clearCart])
 
   const sessionQuery = useQuery({
-    queryKey: ['checkout-session', sessionId],
-    queryFn: () => fetchCheckoutSession(sessionId!),
-    enabled: Boolean(sessionId),
+    queryKey: ['checkout-session', sessionId || orderId || paymentIntentId],
+    queryFn: () => {
+      if (sessionId) {
+        return fetchCheckoutSession(sessionId)
+      }
+      // Se não há sessionId mas há orderId, retornar dados básicos
+      if (orderId || paymentIntentId) {
+        return Promise.resolve({
+          order: { id: orderId || paymentIntentId },
+          session: null,
+        })
+      }
+      throw new Error('No session or order ID provided')
+    },
+    enabled: Boolean(sessionId || orderId || paymentIntentId),
+    retry: 1,
+    retryDelay: 1000,
   })
 
   const summary = useMemo(() => {
@@ -42,6 +62,34 @@ export function CheckoutSuccess() {
         (sessionQuery.data?.session?.amount_total ? sessionQuery.data.session.amount_total / 100 : undefined),
     }
   }, [sessionQuery.data])
+
+  // Tratamento de erro
+  if (sessionQuery.isError && !sessionId && !orderId && !paymentIntentId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary/10 via-white to-accent/10 flex items-center justify-center">
+        <div className="container-xl py-12 sm:py-16 text-center">
+          <div className="mx-auto max-w-md rounded-3xl border border-gray-100 bg-white p-8 shadow-soft">
+            <h1 className="text-2xl font-bold text-secondary mb-4">Pedido não encontrado</h1>
+            <p className="text-sm text-gray-600 mb-6">
+              Não foi possível encontrar informações sobre o seu pedido. Se acabou de fazer um pagamento, aguarde alguns instantes ou contacte-nos.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link to="/" className="flex-1">
+                <Button variant="outline" size="lg" className="w-full rounded-full">
+                  Voltar à página inicial
+                </Button>
+              </Link>
+              <Link to="/contato" className="flex-1">
+                <Button size="lg" className="w-full rounded-full">
+                  Contactar suporte
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/10 via-white to-accent/10">

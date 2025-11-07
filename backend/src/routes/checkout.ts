@@ -693,6 +693,72 @@ router.post('/webhook', async (c) => {
     const { orders, cartItems } = dbSchema
 
     switch (event.type) {
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object as StripeType.PaymentIntent
+        const metadata = paymentIntent.metadata || {}
+        
+        console.log(`💳 Payment Intent succeeded: ${paymentIntent.id} | Amount: €${(paymentIntent.amount || 0) / 100} | Customer: ${paymentIntent.receipt_email}`)
+        
+        const existing = await db.query.orders.findFirst({
+          where: eq(orders.stripeSessionId, paymentIntent.id),
+        })
+
+        if (existing) {
+          console.log(`✅ Order already exists: ${existing.id}`)
+          return c.json({ received: true, orderId: existing.id })
+        }
+
+        const parseAmount = (value: string | null | undefined, fallbackCents?: number | null) => {
+          if (value !== undefined && value !== null) {
+            const parsed = Number(value)
+            return Number.isNaN(parsed) ? 0 : parsed
+          }
+          if (fallbackCents === undefined || fallbackCents === null) {
+            return 0
+          }
+          return Math.round((fallbackCents / 100) * 100) / 100
+        }
+
+        const totals = {
+          subtotal: parseAmount(metadata.subtotal, paymentIntent.amount - (paymentIntent.amount * 0.23 / 1.23)),
+          tax: parseAmount(metadata.tax, paymentIntent.amount * 0.23 / 1.23),
+          shipping: parseAmount(metadata.shipping, 0),
+          total: parseAmount(metadata.total, paymentIntent.amount),
+        }
+
+        let shippingAddress: Record<string, unknown> | null = null
+        if (metadata.shippingAddress && typeof metadata.shippingAddress === 'string') {
+          try {
+            const parsed = JSON.parse(metadata.shippingAddress)
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              shippingAddress = parsed as Record<string, unknown>
+            }
+          } catch {
+            // Ignorar erro
+          }
+        }
+
+        const orderId = crypto.randomUUID()
+        await db.insert(orders).values({
+          id: orderId,
+          userId: (metadata.userId as string) || paymentIntent.receipt_email || 'guest',
+          stripeSessionId: paymentIntent.id,
+          email: paymentIntent.receipt_email || (metadata.email as string) || '',
+          subtotal: totals.subtotal,
+          tax: totals.tax,
+          shipping: totals.shipping,
+          total: totals.total,
+          status: 'paid',
+          shippingAddress,
+          billingAddress: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+
+        console.log(`📦 Order created from Payment Intent: ${orderId} | Payment: ${paymentIntent.id}`)
+        return c.json({ received: true, orderId })
+      }
+
       case 'checkout.session.completed': {
         const session = event.data.object as StripeType.Checkout.Session
         const metadata = session.metadata || {}

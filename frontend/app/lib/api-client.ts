@@ -1,4 +1,5 @@
 import axios, { AxiosHeaders, type AxiosHeaderValue } from 'axios'
+import { logger } from './logger'
 
 function normalizeHeaders(input: unknown): AxiosHeaders {
   if (input instanceof AxiosHeaders) {
@@ -62,11 +63,11 @@ const getBaseURL = () => {
 }
 
 const baseURL = getBaseURL()
-console.log('[API Client] Base URL:', baseURL)
+logger.debug('[API Client] Base URL:', baseURL)
 
 const api = axios.create({
   baseURL,
-  timeout: 10000,
+  timeout: 30000, // 30 segundos para requisições mais lentas
 })
 
 api.interceptors.request.use((config) => {
@@ -82,11 +83,10 @@ api.interceptors.request.use((config) => {
 
   config.headers = headers
   
-  // Log para debug
-  console.log('[API Request]', {
+  // Log para debug (apenas em desenvolvimento)
+  logger.debug('[API Request]', {
     method: config.method?.toUpperCase(),
     url: (config.baseURL || '') + (config.url || ''),
-    data: config.data
   })
   
   return config
@@ -96,16 +96,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('[API Error]', {
+    logger.error('[API Error]', {
       message: error.message,
       status: error.response?.status,
-      statusText: error.response?.statusText,
       url: error.config?.url,
       method: error.config?.method,
-      baseURL: error.config?.baseURL,
-      fullURL: error.config?.baseURL + error.config?.url,
-      data: error.config?.data,
-      responseData: error.response?.data
     })
     
     if (error.response) {
@@ -114,11 +109,9 @@ api.interceptors.response.use(
       const message = error.response.data?.error || error.response.data?.message || error.message
       
       if (status === 405) {
-        console.error('[API Error] Method Not Allowed (405):', {
+        logger.error('[API Error] Method Not Allowed (405):', {
           url: (error.config?.baseURL || '') + (error.config?.url || ''),
           method: error.config?.method,
-          data: error.config?.data,
-          headers: error.config?.headers
         })
         return Promise.reject(new Error(`Método não permitido (405). URL: ${error.config?.baseURL || ''}${error.config?.url || ''}, Método: ${error.config?.method}`))
       }
@@ -126,11 +119,11 @@ api.interceptors.response.use(
       return Promise.reject(new Error(message || `Erro ${status}: ${error.message}`))
     } else if (error.request) {
       // Requisição feita mas sem resposta
-      console.error('[API Error] No response:', error.request)
+      logger.error('[API Error] No response from server')
       return Promise.reject(new Error('Não foi possível conectar ao servidor. Verifique sua conexão.'))
     } else {
       // Erro ao configurar a requisição
-      console.error('[API Error] Request setup error:', error)
+      logger.error('[API Error] Request setup error:', error.message)
       return Promise.reject(new Error(error.message || 'Erro desconhecido'))
     }
   }

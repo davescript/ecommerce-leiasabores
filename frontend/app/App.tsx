@@ -3,26 +3,37 @@ import { Suspense, lazy, useEffect } from 'react'
 import { Header } from '@components/Header'
 import { Footer } from '@components/Footer'
 import { AnnouncementBar } from '@components/AnnouncementBar'
+import { ProtectedRoute } from '@components/ProtectedRoute'
+import { logger } from '@lib/logger'
 import './styles/globals.css'
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })))
 const Catalog = lazy(() => import('./pages/Catalog').then((m) => ({ default: m.Catalog })))
 const ProductDetail = lazy(() => import('./pages/ProductDetail').then((m) => ({ default: m.ProductDetail })))
 const Cart = lazy(() => import('./pages/Cart').then((m) => ({ default: m.Cart })))
-const Checkout = lazy(() => import('./pages/Checkout').then((m) => ({ default: m.Checkout })))
+const Checkout = lazy(() => import('./pages/CheckoutPaymentIntent').then((m) => ({ default: m.CheckoutPaymentIntent })))
 const CheckoutSuccess = lazy(() => import('./pages/CheckoutSuccess').then((m) => ({ default: m.CheckoutSuccess })))
 const About = lazy(() => import('./pages/About').then((m) => ({ default: m.About })))
 const Contact = lazy(() => import('./pages/Contact').then((m) => ({ default: m.Contact })))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy })))
 const Terms = lazy(() => import('./pages/Terms').then((m) => ({ default: m.Terms })))
+const FAQ = lazy(() => import('./pages/FAQ').then((m) => ({ default: m.FAQ })))
+const Envios = lazy(() => import('./pages/Envios').then((m) => ({ default: m.Envios })))
+const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })))
 const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })))
 
 export function App() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => {
-        console.log('SW registration failed:', err)
-      })
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then(() => {
+          logger.debug('Service Worker registered successfully')
+        })
+        .catch((err) => {
+          // Service worker não é crítico, apenas log em dev
+          logger.debug('Service Worker registration failed (non-critical):', err)
+        })
     }
   }, [])
 
@@ -45,8 +56,17 @@ export function App() {
               <Route path="/contato" element={<Contact />} />
               <Route path="/politica-privacidade" element={<PrivacyPolicy />} />
               <Route path="/termos" element={<Terms />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/envios" element={<Envios />} />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <Admin />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </main>

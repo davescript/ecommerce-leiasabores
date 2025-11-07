@@ -5,9 +5,11 @@ import productRoutes from './routes/products'
 import reviewRoutes from './routes/reviews'
 import cartRoutes from './routes/cart'
 import checkoutRoutes from './routes/checkout'
+import paymentIntentRoutes from './routes/payment-intent'
 import uploadsRoutes from './routes/uploads'
 import adminRoutes from './routes/admin'
 import r2Routes from './routes/r2'
+import r2AutoSyncRoutes from './routes/r2-auto-sync'
 import categoriesRoutes from './routes/categories'
 import { errorHandler } from './middleware/errorHandler'
 import { getDb, dbSchema, type DrizzleSchema } from './lib/db'
@@ -419,9 +421,11 @@ app.route('/api/products', productRoutes)
 app.route('/api/reviews', reviewRoutes)
 app.route('/api/cart', cartRoutes)
 app.route('/api/checkout', checkoutRoutes)
+app.route('/api/payment-intent', paymentIntentRoutes)
 app.route('/api/uploads', uploadsRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/r2', r2Routes)
+app.route('/api/r2-auto-sync', r2AutoSyncRoutes)
 app.route('/api/categories', categoriesRoutes)
 
 // Health endpoint sob o prefixo /api para funcionar com rotas de produção

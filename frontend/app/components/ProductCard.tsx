@@ -66,21 +66,22 @@ export function ProductCard({ product, onAddToCart, className }: ProductCardProp
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.35 }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{ duration: 0.3 }}
       className={cn(
-        'group flex h-full flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl',
+        'group flex h-full flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-100 bg-white transition-all duration-300 active:scale-[0.98] sm:hover:-translate-y-1 sm:hover:shadow-xl touch-manipulation',
         className
       )}
     >
       <Link to={`/produto/${product.id}`} className="block">
         <div className="relative aspect-[4/5] overflow-hidden bg-light">
-          <motion.img
+          <img
             src={resolvedSrc}
             alt={product.name}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition duration-500 sm:group-hover:scale-105"
             referrerPolicy="no-referrer"
             decoding="async"
+            loading="lazy"
             onError={() => {
               setImgIndex((prev) => {
                 const next = prev + 1
@@ -91,18 +92,18 @@ export function ProductCard({ product, onAddToCart, className }: ProductCardProp
             }}
           />
           {primaryTag && (
-            <span className="absolute left-4 top-4 rounded-full bg-white/90 px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-secondary shadow-sm">
+            <span className="absolute left-2 top-2 sm:left-4 sm:top-4 rounded-full bg-white/90 px-2 py-0.5 sm:px-4 sm:py-1 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-secondary shadow-sm">
               {primaryTag}
             </span>
           )}
           {product.originalPrice && (
-            <span className="absolute right-4 top-4 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white shadow-sm">
+            <span className="absolute right-2 top-2 sm:right-4 sm:top-4 rounded-full bg-accent px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold text-white shadow-sm">
               -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
             </span>
           )}
           {!product.inStock && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-              <span className="rounded-full bg-white/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-secondary">
+              <span className="rounded-full bg-white/90 px-3 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-secondary">
                 Esgotado
               </span>
             </div>
@@ -110,21 +111,24 @@ export function ProductCard({ product, onAddToCart, className }: ProductCardProp
         </div>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-3 p-5">
-        <div className="space-y-2">
+      <div className="flex flex-1 flex-col gap-2 sm:gap-3 p-3 sm:p-4 md:p-5">
+        <div className="space-y-1.5 sm:space-y-2">
           <Link to={`/produto/${product.id}`} className="block">
-            <h3 className="text-base font-semibold text-secondary transition hover:text-primary line-clamp-2">
+            <h3 className="text-sm sm:text-base font-semibold text-secondary transition hover:text-primary line-clamp-2 leading-tight">
               {product.name}
             </h3>
           </Link>
-          <p className="text-xs uppercase tracking-[0.35em] text-gray-400">{product.category}</p>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] sm:tracking-[0.35em] text-gray-400">{product.category}</p>
+          <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-gray-500">
             <div className="flex items-center gap-0.5 text-primary">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  size={14}
-                  className={i < Math.round(product.rating) ? 'fill-primary text-primary' : 'text-gray-300'}
+                  size={12}
+                  className={cn(
+                    'sm:w-[14px] sm:h-[14px]',
+                    i < Math.round(product.rating) ? 'fill-primary text-primary' : 'text-gray-300'
+                  )}
                 />
               ))}
             </div>
@@ -132,17 +136,17 @@ export function ProductCard({ product, onAddToCart, className }: ProductCardProp
           </div>
         </div>
 
-        <div className="mt-auto space-y-3">
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-semibold text-secondary">{formatPrice(product.price)}</span>
+        <div className="mt-auto space-y-2 sm:space-y-3">
+          <div className="flex items-baseline gap-1.5 sm:gap-2">
+            <span className="text-lg sm:text-2xl font-semibold text-secondary">{formatPrice(product.price)}</span>
             {product.originalPrice && (
-              <span className="text-sm text-gray-400 line-through">{formatPrice(product.originalPrice)}</span>
+              <span className="text-xs sm:text-sm text-gray-400 line-through">{formatPrice(product.originalPrice)}</span>
             )}
           </div>
           <Button
             variant="default"
             size="sm"
-            className="w-full rounded-full"
+            className="w-full rounded-full h-9 sm:h-10 text-xs sm:text-sm font-semibold touch-manipulation"
             disabled={!product.inStock}
             onClick={(event) => {
               event.preventDefault()
@@ -150,8 +154,9 @@ export function ProductCard({ product, onAddToCart, className }: ProductCardProp
               toast.success('Produto adicionado ao carrinho')
             }}
           >
-            <ShoppingCart size={16} className="mr-2" />
-            Adicionar ao carrinho
+            <ShoppingCart size={14} className="mr-1.5 sm:mr-2 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Adicionar ao carrinho</span>
+            <span className="xs:hidden">Adicionar</span>
           </Button>
         </div>
       </div>

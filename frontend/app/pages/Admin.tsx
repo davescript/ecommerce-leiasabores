@@ -7,6 +7,7 @@ import { setAuthToken } from '@lib/api-client'
 import { fetchProducts, createProduct, updateProduct, deleteProduct, uploadFile } from '@lib/api'
 import type { Product } from '@types'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 
 export function Admin() {
   const qc = useQueryClient()
@@ -56,10 +57,34 @@ export function Admin() {
 
   async function handleUpload(file?: File) {
     if (!file) return
-    const res = await uploadFile(file, 'products')
-    const url = `/api/uploads/${res.key}`
-    setUploadPreview(url)
-    setForm(prev => ({ ...prev, images: [url] }))
+    
+    // Validação de tipo de arquivo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml']
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Tipo de arquivo não suportado. Use JPG, PNG, WebP ou SVG.')
+      return
+    }
+    
+    // Validação de tamanho (10MB máximo)
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      toast.error('Arquivo muito grande. Tamanho máximo: 10MB.')
+      return
+    }
+    
+    try {
+      const res = await uploadFile(file, 'products')
+      const url = `/api/uploads/${res.key}`
+      setUploadPreview(url)
+      setForm(prev => ({ ...prev, images: [url] }))
+      toast.success('Imagem carregada com sucesso')
+    } catch (error) {
+      toast.error('Erro ao fazer upload da imagem. Tente novamente.')
+      // Log apenas em desenvolvimento
+      if (import.meta.env.DEV) {
+        console.error('Upload error:', error)
+      }
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -128,7 +153,16 @@ export function Admin() {
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" onClick={() => startEdit(p)}>Editar</Button>
-                      <Button variant="ghost" onClick={() => deleteMutation.mutate(p.id)}>Eliminar</Button>
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => {
+                          if (window.confirm(`Tem certeza que deseja eliminar "${p.name}"? Esta ação não pode ser desfeita.`)) {
+                            deleteMutation.mutate(p.id)
+                          }
+                        }}
+                      >
+                        Eliminar
+                      </Button>
                     </div>
                   </motion.div>
                 ))}
@@ -140,7 +174,20 @@ export function Admin() {
             <h2 className="text-lg font-semibold mb-3">{editing ? 'Editar' : 'Criar'} produto</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
               <Input value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nome" required />
-              <Input type="number" step="0.01" value={form.price as number} onChange={e => setForm({ ...form, price: parseFloat(e.target.value) })} placeholder="Preço" required />
+              <Input 
+                type="number" 
+                step="0.01" 
+                min="0.01"
+                value={form.price as number} 
+                onChange={e => {
+                  const value = parseFloat(e.target.value)
+                  if (value >= 0.01 || e.target.value === '') {
+                    setForm({ ...form, price: value || 0 })
+                  }
+                }} 
+                placeholder="Preço" 
+                required 
+              />
               <Input value={form.category || ''} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Categoria" />
               <Textarea value={form.shortDescription || ''} onChange={e => setForm({ ...form, shortDescription: e.target.value })} placeholder="Descrição curta" />
               <Textarea value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Descrição" />

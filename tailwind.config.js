@@ -38,6 +38,12 @@ export default {
         'soft': '0 2px 8px rgba(0, 0, 0, 0.08)',
         'soft-lg': '0 8px 24px rgba(0, 0, 0, 0.12)',
       },
+      screens: {
+        'xs': '475px',
+      },
+      touchAction: {
+        'manipulation': 'manipulation',
+      },
     },
   },
   plugins: [tailwindcssAnimate],

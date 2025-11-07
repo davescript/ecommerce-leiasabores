@@ -106,3 +106,38 @@ export async function syncCartItems(userId: string, items: Array<Pick<CartItem, 
     )
   )
 }
+
+// Payment Intent APIs
+export interface PaymentIntentCreatePayload {
+  items: Array<{ productId: string; quantity: number }>
+  shippingAddress: Address
+  email: string
+}
+
+export interface PaymentIntentCreateResponse {
+  clientSecret: string
+  paymentIntentId: string
+  amount: number
+  currency: string
+}
+
+export interface PaymentIntentConfirmPayload {
+  paymentIntentId: string
+}
+
+export interface PaymentIntentConfirmResponse {
+  success: boolean
+  orderId?: string
+  status: string
+  paymentIntentId: string
+}
+
+export async function createPaymentIntent(payload: PaymentIntentCreatePayload) {
+  const response = await api.post<PaymentIntentCreateResponse>('/payment-intent/create', payload)
+  return response.data
+}
+
+export async function confirmPaymentIntent(payload: PaymentIntentConfirmPayload) {
+  const response = await api.post<PaymentIntentConfirmResponse>('/payment-intent/confirm', payload)
+  return response.data
+}
