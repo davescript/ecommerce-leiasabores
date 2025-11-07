@@ -19,7 +19,7 @@ export default defineConfig({
   },
   build: {
     outDir: path.resolve(__dirname, '../dist/public'),
-    emptyOutDir: false,
+    emptyOutDir: true, // Limpar diretório para evitar arquivos antigos
     minify: 'terser',
     sourcemap: false,
     rollupOptions: {
@@ -27,7 +27,6 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
-        // Adicionar timestamp para forçar cache bust
         manualChunks: undefined,
       },
     },
