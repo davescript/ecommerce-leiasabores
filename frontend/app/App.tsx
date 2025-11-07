@@ -46,6 +46,28 @@ function LayoutWrapper({ children, showHeaderFooter }: { children: React.ReactNo
 
 export function App() {
   useEffect(() => {
+    // Forçar limpeza de cache ao carregar (apenas em /admin)
+    if (window.location.pathname.startsWith('/admin')) {
+      // Desregistrar service workers antigos
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => {
+            // Se o cache name não for v2.0, desregistrar
+            registration.unregister().catch(() => {})
+          })
+        })
+        
+        // Limpar caches antigos
+        caches.keys().then(cacheNames => {
+          cacheNames.forEach(cacheName => {
+            if (!cacheName.includes('v2.0')) {
+              caches.delete(cacheName).catch(() => {})
+            }
+          })
+        })
+      }
+    }
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js', { updateViaCache: 'none' })
