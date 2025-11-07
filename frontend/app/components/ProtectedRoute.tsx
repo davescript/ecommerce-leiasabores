@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 interface ProtectedRouteProps {
@@ -8,11 +8,12 @@ interface ProtectedRouteProps {
 
 /**
  * Componente para proteger rotas que requerem autenticação
- * Por enquanto, apenas verifica se há token no localStorage
- * Em produção, deve validar o token com o backend
+ * Para o painel Admin, permite acesso mesmo sem token
+ * (o próprio painel tem campo para configurar o token)
  */
 export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const location = useLocation()
 
   useEffect(() => {
     if (!requireAuth) {
@@ -20,7 +21,18 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
       return
     }
 
-    // Verificar se há token no localStorage
+    // Para o admin, permitir acesso mesmo sem token
+    // O próprio painel Admin tem campo para configurar o token
+    // Verificar se estamos na rota /admin
+    const isAdminRoute = location.pathname === '/admin'
+    
+    if (isAdminRoute) {
+      // Permitir acesso ao admin sempre (ele gerencia seu próprio token)
+      setIsAuthenticated(true)
+      return
+    }
+
+    // Para outras rotas protegidas, verificar token
     const token = localStorage.getItem('admin_token')
     
     if (!token) {
@@ -50,11 +62,15 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
         setIsAuthenticated(false)
       }
     } catch {
-      // Token inválido
-      localStorage.removeItem('admin_token')
-      setIsAuthenticated(false)
+      // Token inválido - mas para admin, permitir acesso
+      if (isAdminRoute) {
+        setIsAuthenticated(true)
+      } else {
+        localStorage.removeItem('admin_token')
+        setIsAuthenticated(false)
+      }
     }
-  }, [requireAuth])
+  }, [requireAuth, location.pathname])
 
   // Mostrar loading enquanto verifica
   if (isAuthenticated === null) {
@@ -68,9 +84,12 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
     )
   }
 
-  // Redirecionar se não autenticado
+  // Redirecionar se não autenticado (exceto admin)
   if (!isAuthenticated && requireAuth) {
-    return <Navigate to="/" replace />
+    const isAdminRoute = location.pathname === '/admin'
+    if (!isAdminRoute) {
+      return <Navigate to="/" replace />
+    }
   }
 
   return <>{children}</>

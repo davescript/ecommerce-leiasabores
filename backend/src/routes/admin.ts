@@ -112,7 +112,64 @@ admin.post('/seed-topos', async (c) => {
 })
 
 // ------------------------------------------------------
-// 🧩 3. SYNC AUTOMÁTICO COM R2
+// 🧩 3. PRODUTO DE TESTE 1€ (TOKEN ADMIN_SEED_TOKEN)
+// ------------------------------------------------------
+admin.post('/seed-teste-1eur', async (c) => {
+  const token = c.req.query('token')
+  const expected = (c.env as WorkerBindings).ADMIN_SEED_TOKEN
+  if (!expected || token !== expected) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  const db = getDb(c.env as WorkerBindings)
+  const { products } = dbSchema as DrizzleSchema
+  const now = new Date().toISOString()
+
+  const productId = 'prod-teste-1eur'
+  const existing = await db.query.products.findFirst({
+    where: eq(products.id, productId),
+  }).catch(() => null)
+
+  if (existing) {
+    // Atualizar se já existe
+    await db
+      .update(products)
+      .set({
+        name: 'Produto de Teste - 1€',
+        description: 'Produto de teste para validação de pagamento. Este é um produto temporário para testar o sistema de pagamento.',
+        shortDescription: 'Produto de teste para pagamento',
+        price: 1.00,
+        category: 'Teste',
+        images: ['https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&q=80'],
+        inStock: true,
+        tags: ['teste', 'pagamento'],
+        updatedAt: now,
+      })
+      .where(eq(products.id, productId))
+    
+    return c.json({ ok: true, action: 'updated', productId })
+  }
+
+  // Criar novo
+  await db.insert(products).values({
+    id: productId,
+    name: 'Produto de Teste - 1€',
+    description: 'Produto de teste para validação de pagamento. Este é um produto temporário para testar o sistema de pagamento.',
+    shortDescription: 'Produto de teste para pagamento',
+    price: 1.00,
+    category: 'Teste',
+    images: ['https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&q=80'],
+    inStock: true,
+    tags: ['teste', 'pagamento'],
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  return c.json({ ok: true, action: 'created', productId })
+})
+
+// ------------------------------------------------------
+// 🧩 4. SYNC AUTOMÁTICO COM R2
 // ------------------------------------------------------
 admin.route('/', syncR2Routes)
 

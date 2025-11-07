@@ -89,19 +89,51 @@ export function Admin() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    
+    // Validação de preço
+    const price = Number(form.price) || 0
+    if (price < 0.01) {
+      toast.error('O preço deve ser pelo menos €0.01')
+      return
+    }
+    
     const body: Partial<Product> = {
       name: form.name?.trim() || '',
       description: form.description || '',
       shortDescription: form.shortDescription || '',
-      price: Number(form.price) || 0,
-      originalPrice: form.originalPrice,
+      price: price,
+      originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
       category: form.category || 'Diversos',
       images: form.images && form.images.length ? form.images : [],
       inStock: Boolean(form.inStock),
       tags: form.tags || [],
     }
-    if (editing) updateMutation.mutate({ id: editing.id, body })
-    else createMutation.mutate(body)
+    
+    if (editing) {
+      updateMutation.mutate({ id: editing.id, body }, {
+        onSuccess: () => {
+          toast.success('Produto atualizado com sucesso!')
+        },
+        onError: (error) => {
+          toast.error('Erro ao atualizar produto. Verifique o console para mais detalhes.')
+          if (import.meta.env.DEV) {
+            console.error('Update error:', error)
+          }
+        }
+      })
+    } else {
+      createMutation.mutate(body, {
+        onSuccess: () => {
+          toast.success('Produto criado com sucesso!')
+        },
+        onError: (error) => {
+          toast.error('Erro ao criar produto. Verifique o console para mais detalhes.')
+          if (import.meta.env.DEV) {
+            console.error('Create error:', error)
+          }
+        }
+      })
+    }
   }
 
   function startEdit(p: Product) {
@@ -178,14 +210,28 @@ export function Admin() {
                 type="number" 
                 step="0.01" 
                 min="0.01"
-                value={form.price as number} 
+                value={form.price || ''} 
                 onChange={e => {
-                  const value = parseFloat(e.target.value)
-                  if (value >= 0.01 || e.target.value === '') {
-                    setForm({ ...form, price: value || 0 })
+                  const inputValue = e.target.value
+                  // Permitir string vazia temporariamente durante digitação
+                  if (inputValue === '') {
+                    setForm({ ...form, price: 0 })
+                    return
+                  }
+                  const value = parseFloat(inputValue)
+                  // Aceitar qualquer número válido (incluindo 0 para permitir digitação)
+                  if (!isNaN(value) && value >= 0) {
+                    setForm({ ...form, price: value })
                   }
                 }} 
-                placeholder="Preço" 
+                onBlur={e => {
+                  // Garantir valor mínimo ao sair do campo
+                  const value = parseFloat(e.target.value) || 0
+                  if (value < 0.01) {
+                    setForm({ ...form, price: 0.01 })
+                  }
+                }}
+                placeholder="Preço (ex: 1.00)" 
                 required 
               />
               <Input value={form.category || ''} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Categoria" />
