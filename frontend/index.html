@@ -15,24 +15,35 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.85em' font-size='90'>🍰</text></svg>" />
   <title>Leia Sabores · Topos personalizados & bolos artesanais</title>
   <script>
-    // FORÇAR NO CACHE - Versão 2.0
-    const VERSION = 'v2.0-admin-panel-2025-11-07-14-00'
+    // FORÇAR NO CACHE - Versão 3.0 (Design Completo)
+    const VERSION = 'v3.0-admin-complete-2025-11-07-15-30'
     console.log('[App] Loading version:', VERSION)
     
-    // Limpar cache imediatamente se estiver em /admin
-    if (window.location.pathname.startsWith('/admin')) {
-      console.log('[App] Admin route detected, clearing cache...')
+    // Limpar cache AGressivamente
+    (function() {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => {
-          regs.forEach(reg => reg.unregister())
+          regs.forEach(reg => {
+            console.log('[App] Unregistering SW:', reg.scope)
+            reg.unregister()
+          })
         })
       }
       if ('caches' in window) {
         caches.keys().then(names => {
-          names.forEach(name => caches.delete(name))
+          names.forEach(name => {
+            console.log('[App] Deleting cache:', name)
+            caches.delete(name)
+          })
         })
       }
-    }
+      // Limpar localStorage de versões antigas
+      if (localStorage.getItem('app_version') !== VERSION) {
+        console.log('[App] Clearing old localStorage')
+        localStorage.clear()
+        localStorage.setItem('app_version', VERSION)
+      }
+    })()
   </script>
 </head>
 <body>
