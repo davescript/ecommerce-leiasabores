@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Purge Cache - Leia Sabores Admin</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+</head>
+<body>
+    <h1>🧹 Cache Purge - Admin Leia Sabores</h1>
+    <p><strong>Timestamp:</strong> <span id="timestamp"></span></p>
+    <p><strong>Status:</strong> Cache limpo, redirecionando para admin novo...</p>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toISOString();
+        
+        // Limpar TUDO
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => caches.delete(name));
+            });
+        }
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(reg => reg.unregister());
+            });
+        }
+        
+        // Redirecionar para admin após 2 segundos
+        setTimeout(() => {
+            window.location.href = '/admin?clean=' + Date.now();
+        }, 2000);
+    </script>
+</body>
+</html>
