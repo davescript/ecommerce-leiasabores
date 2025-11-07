@@ -1,0 +1,9 @@
+# Ignore test files in unit tests directory
+tests/unit/**
+**/*.test.ts
+**/*.test.tsx
+
+# Ignore config files
+**/*.config.*
+**/node_modules/**
+

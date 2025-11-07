@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Leia Sabores - Topos personalizados, bolos artesanais e decoração elegante com entrega express em Portugal." />
+  <meta name="theme-color" content="#f25f8b" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Leia Sabores" />
+  <meta property="og:image" content="https://pub-0bee0f99d33843b0919051e550f8e6b3.r2.dev/og/og-default.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.85em' font-size='90'>🍰</text></svg>" />
+  <title>Leia Sabores · Topos personalizados & bolos artesanais</title>
+  <!-- FORÇAR CLOUDFLARE A ATUALIZAR - VERSÃO LIMPA -->
+  <meta name="cache-buster" content="v7.1-final-deploy-1762544280" />
+  <meta name="build-id" content="final-2df40b0" />
+  <meta name="force-reload" content="true" />
+  <meta name="deploy-status" content="duplicates-removed" />
+  <script>
+    // Versão simplificada - sem loops de reload
+    console.log('[App] Carregando aplicação...')
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    // Scripts de cache busting removidos para evitar loops
+    // O React Router agora gerencia tudo corretamente
+  </script>
+  <script>
+    // REMOVIDO: Código antigo do admin simples
+    // Agora o React Router carrega o admin completo automaticamente
+    console.log('[App] Carregando aplicação React...')
+  </script>
+  <script type="module" src="/main.tsx"></script>
+  <script>
+    // Forçar atualização do Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+          registration.update()
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+          }
+        })
+      })
+    }
+  </script>
+</body>
+</html>
