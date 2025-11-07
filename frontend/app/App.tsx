@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Suspense, lazy, useEffect } from 'react'
 import { Header } from '@components/Header'
 import { Footer } from '@components/Footer'
@@ -30,6 +30,128 @@ const AdminCoupons = lazy(() => import('./pages/admin/Coupons/index').then((m) =
 const AdminCustomers = lazy(() => import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList })))
 const AdminSettings = lazy(() => import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings })))
 
+function AppContent() {
+  const location = useLocation()
+  const isAdminRoute = location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/legacy')
+
+  if (isAdminRoute) {
+    // Rotas admin não mostram Header/Footer
+    return (
+      <Suspense fallback={<div className="py-20 text-center text-sm text-gray-500">A carregar…</div>}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <AdminLayout>
+                  <AdminDashboard />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <AdminLayout>
+                  <AdminProducts />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <AdminLayout>
+                  <AdminOrders />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/categories"
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <AdminLayout>
+                  <AdminCategories />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/coupons"
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <AdminLayout>
+                  <AdminCoupons />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/customers"
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <AdminLayout>
+                  <AdminCustomers />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <AdminLayout>
+                  <AdminSettings />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
+    )
+  }
+
+  // Rotas públicas mostram Header/Footer
+  return (
+    <div className="flex flex-col min-h-screen">
+      <AnnouncementBar />
+      <Header />
+      <main className="flex-1">
+        <Suspense fallback={<div className="py-20 text-center text-sm text-gray-500">A carregar…</div>}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/catalogo" element={<Catalog />} />
+            <Route path="/produto/:id" element={<ProductDetail />} />
+            <Route path="/carrinho" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/pagamentos" element={<Navigate to="/checkout" replace />} />
+            <Route path="/sucesso" element={<CheckoutSuccess />} />
+            <Route path="/sobre" element={<About />} />
+            <Route path="/contato" element={<Contact />} />
+            <Route path="/politica-privacidade" element={<PrivacyPolicy />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/envios" element={<Envios />} />
+            <Route
+              path="/admin/legacy"
+              element={
+                <ProtectedRoute requireAuth={true}>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </main>
+      <Footer />
+    </div>
+  )
+}
+
 export function App() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -47,109 +169,7 @@ export function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex flex-col min-h-screen">
-        <AnnouncementBar />
-        <Header />
-        <main className="flex-1">
-          <Suspense fallback={<div className="py-20 text-center text-sm text-gray-500">A carregar…</div>}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/catalogo" element={<Catalog />} />
-              <Route path="/produto/:id" element={<ProductDetail />} />
-              <Route path="/carrinho" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/pagamentos" element={<Navigate to="/checkout" replace />} />
-              <Route path="/sucesso" element={<CheckoutSuccess />} />
-              <Route path="/sobre" element={<About />} />
-              <Route path="/contato" element={<Contact />} />
-              <Route path="/politica-privacidade" element={<PrivacyPolicy />} />
-              <Route path="/termos" element={<Terms />} />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="/envios" element={<Envios />} />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <AdminLayout>
-                      <AdminDashboard />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/products"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <AdminLayout>
-                      <AdminProducts />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/orders"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <AdminLayout>
-                      <AdminOrders />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/categories"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <AdminLayout>
-                      <AdminCategories />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/coupons"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <AdminLayout>
-                      <AdminCoupons />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/customers"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <AdminLayout>
-                      <AdminCustomers />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/settings"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <AdminLayout>
-                      <AdminSettings />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/legacy"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <Admin />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </main>
-        <Footer />
-      </div>
+      <AppContent />
     </BrowserRouter>
   )
 }
