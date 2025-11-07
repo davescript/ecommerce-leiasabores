@@ -29,6 +29,7 @@ const AdminCategories = lazy(() => import('./pages/admin/Categories/index').then
 const AdminCoupons = lazy(() => import('./pages/admin/Coupons/index').then((m) => ({ default: m.CouponsList })))
 const AdminCustomers = lazy(() => import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList })))
 const AdminSettings = lazy(() => import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings })))
+const TestAdmin = lazy(() => import('./pages/admin/TestAdmin').then((m) => ({ default: m.TestAdmin })))
 
 function LayoutWrapper({ children, showHeaderFooter }: { children: React.ReactNode; showHeaderFooter: boolean }) {
   if (showHeaderFooter) {
@@ -187,6 +188,12 @@ export function App() {
                 <Envios />
               </LayoutWrapper>
             }
+          />
+
+          {/* Rota de Teste - SEM Header/Footer */}
+          <Route
+            path="/admin/test"
+            element={<TestAdmin />}
           />
 
           {/* Rotas Admin - SEM Header/Footer */}

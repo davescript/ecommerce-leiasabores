@@ -42,6 +42,11 @@ export function AdminLayout({ children }: { children?: ReactNode }) {
   const { logout } = useAuth()
 
   console.log('[AdminLayout] Rendering, path:', location.pathname, 'children:', !!children)
+  
+  // Forçar renderização mesmo se houver erro
+  if (!children) {
+    console.warn('[AdminLayout] No children provided, rendering default content')
+  }
 
   const isActive = (path: string) => {
     if (path === '/admin') {
