@@ -6,6 +6,7 @@ import { useCartStore } from '@hooks/useCart'
 import type { CartItem } from '@types'
 import { useSEO } from '@hooks/useSEO'
 import { formatPrice } from '@lib/utils'
+import { PLACEHOLDER_SVG } from '@lib/image-placeholders'
 
 // Valid UUID v4 pattern - used to validate product IDs
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
