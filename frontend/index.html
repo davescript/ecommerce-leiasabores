@@ -15,15 +15,15 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.85em' font-size='90'>🍰</text></svg>" />
   <title>Leia Sabores · Topos personalizados & bolos artesanais</title>
   <script>
-    // FORÇAR NO CACHE - Versão 4.0 (Sem Unsplash)
-    const VERSION = 'v4.0-no-unsplash-2025-11-07-16-00'
+    // FORÇAR NO CACHE - Versão 5.0 (Admin Recriado)
+    const VERSION = 'v5.0-admin-rebuild-' + Date.now()
     console.log('[App] Loading version:', VERSION)
     
-    // Limpar cache AGRESSIVAMENTE - FORÇAR ATUALIZAÇÃO
+    // Limpar cache AGRESSIVAMENTE - FORÇAR ATUALIZAÇÃO IMEDIATA
     (function() {
       console.log('[App] FORÇANDO ATUALIZAÇÃO - Versão:', VERSION)
       
-      // 1. Desregistrar TODOS os service workers
+      // 1. Desregistrar TODOS os service workers IMEDIATAMENTE
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => {
           regs.forEach(reg => {
@@ -33,7 +33,7 @@
         })
       }
       
-      // 2. Deletar TODOS os caches
+      // 2. Deletar TODOS os caches IMEDIATAMENTE
       if ('caches' in window) {
         caches.keys().then(names => {
           names.forEach(name => {
@@ -43,29 +43,31 @@
         })
       }
       
-      // 3. Limpar localStorage se versão antiga
+      // 3. Limpar TUDO se versão antiga
       const oldVersion = localStorage.getItem('app_version')
       if (oldVersion !== VERSION) {
-        console.log('[App] Old version detected:', oldVersion, '- Clearing localStorage')
+        console.log('[App] Old version detected:', oldVersion, '- FORÇANDO LIMPEZA TOTAL')
         localStorage.clear()
         sessionStorage.clear()
+        indexedDB.databases().then(dbs => {
+          dbs.forEach(db => {
+            if (db.name) indexedDB.deleteDatabase(db.name)
+          })
+        }).catch(() => {})
         localStorage.setItem('app_version', VERSION)
         
-        // 4. Se versão muito antiga, forçar reload
-        if (oldVersion && !oldVersion.includes('v4.0')) {
-          console.log('[App] Very old version, forcing reload in 1 second...')
-          setTimeout(() => {
-            window.location.reload()
-          }, 1000)
+        // 4. FORÇAR RELOAD IMEDIATO se versão antiga (especialmente para /admin)
+        if (oldVersion && (oldVersion.includes('v3.0') || oldVersion.includes('v4.0') || !oldVersion.includes('v5.0'))) {
+          console.log('[App] Versão muito antiga detectada, forçando reload IMEDIATO...')
+          // Se estiver em /admin, forçar reload com cache buster
+          if (window.location.pathname.startsWith('/admin')) {
+            window.location.href = window.location.origin + '/admin?nocache=' + Date.now() + '&v=' + VERSION
+          } else {
+            setTimeout(() => {
+              window.location.reload(true)
+            }, 100)
+          }
         }
-      }
-      
-      // 5. Adicionar timestamp ao URL para forçar reload de assets
-      if (window.location.search.indexOf('v=') === -1) {
-        const url = new URL(window.location.href)
-        url.searchParams.set('v', Date.now())
-        console.log('[App] Adding cache buster to URL')
-        // Não redirecionar automaticamente para evitar loop
       }
     })()
   </script>
