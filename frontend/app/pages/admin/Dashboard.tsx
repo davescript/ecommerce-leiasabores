@@ -6,9 +6,7 @@ import {
   AlertTriangle,
   Users,
   Percent,
-  Clock,
-  ArrowUpRight,
-  ArrowDownRight
+  Clock
 } from 'lucide-react'
 import { KPICard } from '../../components/admin/KPICard'
 import { DataTable } from '../../components/admin/DataTable'

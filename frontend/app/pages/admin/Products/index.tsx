@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, Eye, Copy, Filter, MoreVertical, Image as ImageIcon } from 'lucide-react'
+import { Plus, Search, Trash2, Eye, Copy, Image as ImageIcon } from 'lucide-react'
 import { DataTable } from '../../../components/admin/DataTable'
 import { Button } from '../../../components/Button'
 import { Input } from '../../../components/ui/input'

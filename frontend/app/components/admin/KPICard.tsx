@@ -1,4 +1,3 @@
-import { ReactNode } from 'react'
 import { LucideIcon } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -11,7 +10,6 @@ interface KPICardProps {
     isPositive: boolean
   }
   iconColor?: string
-  trend?: 'up' | 'down' | 'neutral'
 }
 
 export function KPICard({ 
@@ -19,8 +17,7 @@ export function KPICard({
   value, 
   icon: Icon, 
   change, 
-  iconColor = 'text-primary',
-  trend = 'neutral'
+  iconColor = 'text-primary'
 }: KPICardProps) {
   const changeColorClass = change?.isPositive 
     ? 'text-green-600 bg-green-50' 
