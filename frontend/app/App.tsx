@@ -200,9 +200,11 @@ export function App() {
           <Route
             path="/admin"
             element={
-              <LayoutWrapper showHeaderFooter={true}>
-                <Admin />
-              </LayoutWrapper>
+              <ProtectedRoute requireAuth={false}>
+                <AdminLayout>
+                  <AdminDashboard />
+                </AdminLayout>
+              </ProtectedRoute>
             }
           />
           <Route
