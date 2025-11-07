@@ -110,27 +110,55 @@ export function Admin() {
     }
     
     if (editing) {
+      // Verificar se tem token configurado
+      if (!token || token.trim() === '') {
+        toast.error('Token JWT necessário! Configure o token na seção "Autenticação" acima.')
+        return
+      }
+      
       updateMutation.mutate({ id: editing.id, body }, {
         onSuccess: () => {
           toast.success('Produto atualizado com sucesso!')
         },
-        onError: (error) => {
-          toast.error('Erro ao atualizar produto. Verifique o console para mais detalhes.')
-          if (import.meta.env.DEV) {
-            console.error('Update error:', error)
+        onError: (error: any) => {
+          const errorMessage = error?.response?.data?.error || error?.message || 'Erro desconhecido'
+          const status = error?.response?.status
+          
+          if (status === 401) {
+            toast.error('Token inválido ou expirado. Configure um novo token JWT.')
+          } else if (status === 403) {
+            toast.error('Acesso negado. O token precisa ter role "admin".')
+          } else {
+            toast.error(`Erro ao atualizar produto: ${errorMessage}`)
           }
+          
+          console.error('Update error:', error)
         }
       })
     } else {
+      // Verificar se tem token configurado
+      if (!token || token.trim() === '') {
+        toast.error('Token JWT necessário! Configure o token na seção "Autenticação" acima.')
+        return
+      }
+      
       createMutation.mutate(body, {
         onSuccess: () => {
           toast.success('Produto criado com sucesso!')
         },
-        onError: (error) => {
-          toast.error('Erro ao criar produto. Verifique o console para mais detalhes.')
-          if (import.meta.env.DEV) {
-            console.error('Create error:', error)
+        onError: (error: any) => {
+          const errorMessage = error?.response?.data?.error || error?.message || 'Erro desconhecido'
+          const status = error?.response?.status
+          
+          if (status === 401) {
+            toast.error('Token inválido ou expirado. Configure um novo token JWT.')
+          } else if (status === 403) {
+            toast.error('Acesso negado. O token precisa ter role "admin".')
+          } else {
+            toast.error(`Erro ao criar produto: ${errorMessage}`)
           }
+          
+          console.error('Create error:', error)
         }
       })
     }
@@ -159,10 +187,58 @@ export function Admin() {
 
         <section className="mb-8 rounded-xl bg-white p-4 shadow-soft">
           <h2 className="text-lg font-semibold mb-3">Autenticação</h2>
-          <div className="flex gap-3 items-center">
-            <Input value={token} onChange={e => setToken(e.target.value)} placeholder="JWT Token (admin)" />
-            <Button onClick={() => setAuthToken(token)}>Aplicar</Button>
-            <span className="text-xs text-gray-500">O token é guardado localmente enquanto a sessão estiver aberta.</span>
+          <div className="space-y-3">
+            <div className="flex gap-3 items-center">
+              <Input 
+                value={token} 
+                onChange={e => setToken(e.target.value)} 
+                placeholder="JWT Token (admin)" 
+                type="password"
+                className="flex-1"
+              />
+              <Button onClick={() => {
+                setAuthToken(token)
+                toast.success('Token aplicado! Agora pode criar/editar produtos.')
+              }}>
+                Aplicar
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/api/admin/login?token=seed-topos-20251105`)
+                    if (!response.ok) {
+                      const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
+                      throw new Error(errorData.error || 'Erro ao gerar token')
+                    }
+                    const data = await response.json()
+                    setToken(data.token)
+                    setAuthToken(data.token)
+                    toast.success('Token JWT gerado e aplicado automaticamente!')
+                  } catch (error) {
+                    toast.error('Erro ao gerar token. Verifique o console.')
+                    console.error('Token generation error:', error)
+                  }
+                }}
+              >
+                Gerar Token
+              </Button>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500">
+                O token é guardado localmente enquanto a sessão estiver aberta.
+              </p>
+              {!token && (
+                <p className="text-xs text-amber-600">
+                  ⚠️ Clique em "Gerar Token" para obter um token JWT válido automaticamente, ou configure manualmente.
+                </p>
+              )}
+              {token && (
+                <p className="text-xs text-green-600">
+                  ✅ Token configurado. Você pode criar/editar produtos.
+                </p>
+              )}
+            </div>
           </div>
         </section>
 

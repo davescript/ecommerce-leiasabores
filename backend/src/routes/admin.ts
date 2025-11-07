@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { sign } from 'hono/jwt'
 import { getDb, dbSchema, type DrizzleSchema } from '../lib/db'
 import { eq } from 'drizzle-orm'
 import type { WorkerBindings } from '../types/bindings'
@@ -112,7 +113,46 @@ admin.post('/seed-topos', async (c) => {
 })
 
 // ------------------------------------------------------
-// 🧩 3. PRODUTO DE TESTE 1€ (TOKEN ADMIN_SEED_TOKEN)
+// 🧩 3. GERAR TOKEN JWT ADMIN (TOKEN ADMIN_SEED_TOKEN)
+// ------------------------------------------------------
+admin.post('/login', async (c) => {
+  const token = c.req.query('token')
+  const expected = (c.env as WorkerBindings).ADMIN_SEED_TOKEN
+  if (!expected || token !== expected) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  const env = c.env as WorkerBindings
+  
+  if (!env.JWT_SECRET) {
+    return c.json({ error: 'JWT_SECRET not configured' }, 500)
+  }
+
+  try {
+    // Gerar token JWT com role admin
+    const payload: JWTPayload = {
+      userId: 'admin',
+      email: 'admin@leiasabores.pt',
+      role: 'admin',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // 1 ano de validade
+    }
+
+    const jwtToken = await sign(payload, env.JWT_SECRET)
+
+    return c.json({
+      token: jwtToken,
+      expiresIn: '1 year',
+      role: 'admin',
+    })
+  } catch (error) {
+    console.error('Failed to generate JWT token', error)
+    return c.json({ error: 'Failed to generate token' }, 500)
+  }
+})
+
+// ------------------------------------------------------
+// 🧩 4. PRODUTO DE TESTE 1€ (TOKEN ADMIN_SEED_TOKEN)
 // ------------------------------------------------------
 admin.post('/seed-teste-1eur', async (c) => {
   const token = c.req.query('token')
