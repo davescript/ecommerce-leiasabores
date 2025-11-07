@@ -18,7 +18,7 @@ router.post('/seed-partyland', async (c) => {
     return c.json({
       success: true,
       message: 'Produtos Partyland adicionados com sucesso!',
-      ...result
+      data: result
     })
   } catch (error) {
     console.error('Erro ao fazer seed Partyland:', error)

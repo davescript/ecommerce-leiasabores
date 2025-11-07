@@ -11,7 +11,6 @@ import {
   Package,
   Star,
   TrendingUp,
-  Filter,
   Download,
   Upload,
   Copy,
@@ -24,7 +23,7 @@ import { Button } from '@components/ui/button'
 import { Input } from '@components/ui/input'
 import { SafeImage } from '@components/SafeImage'
 import { PLACEHOLDER_SVG } from '@lib/image-placeholders'
-import { LoadingSpinner, TableLoadingSkeleton } from '@components/admin/LoadingSpinner'
+import { LoadingSpinner } from '@components/admin/LoadingSpinner'
 import { QuickProductsList } from '@components/admin/QuickProductsList'
 
 export function ProductsList() {
@@ -41,7 +40,7 @@ export function ProductsList() {
     queryKey: ['admin-products'],
     queryFn: () => fetchProducts({ page: 1, limit: 20 }), // Apenas 20 produtos iniciais
     staleTime: Infinity, // Cache infinito - só atualiza manualmente
-    cacheTime: Infinity, // Manter em cache para sempre
+    gcTime: Infinity, // Manter em cache para sempre
     refetchOnWindowFocus: false,
     refetchOnMount: false, // Não refetch ao montar se já tem cache
     refetchOnReconnect: false,
@@ -52,7 +51,7 @@ export function ProductsList() {
     queryKey: ['categories'],
     queryFn: fetchCategories,
     staleTime: Infinity, // Cache infinito
-    cacheTime: Infinity,
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -104,8 +103,8 @@ export function ProductsList() {
     },
   })
 
-  const products = data?.data || []
-  const categories = categoriesData || []
+  const products = (data as any)?.data || []
+  const categories = (categoriesData as any) || []
   
   // Filtros otimizados - aplicar apenas se necessário
   const filteredProducts = useMemo(() => {
@@ -116,7 +115,7 @@ export function ProductsList() {
       return products
     }
     
-    return products.filter((p) => {
+    return products.filter((p: any) => {
       if (search) {
         const searchLower = search.toLowerCase()
         if (!p.name.toLowerCase().includes(searchLower) && 
@@ -144,15 +143,15 @@ export function ProductsList() {
   // Memoizar estatísticas
   const stats = useMemo(() => ({
     totalProducts: products.length,
-    activeProducts: products.filter(p => p.inStock).length,
-    totalValue: products.reduce((sum, p) => sum + p.price, 0)
+    activeProducts: products.filter((p: any) => p.inStock).length,
+    totalValue: products.reduce((sum: number, p: any) => sum + p.price, 0)
   }), [products])
   
   const handleSelectAll = useCallback(() => {
     if (selectedProducts.length === filteredProducts.length) {
       setSelectedProducts([])
     } else {
-      setSelectedProducts(filteredProducts.map(p => p.id))
+      setSelectedProducts(filteredProducts.map((p: any) => p.id))
     }
   }, [selectedProducts.length, filteredProducts])
 
@@ -179,7 +178,7 @@ export function ProductsList() {
       })
     } else {
       selectedProducts.forEach(id => {
-        const product = products.find(p => p.id === id)
+        const product = products.find((p: any) => p.id === id)
         if (product) {
           updateMutation.mutate({
             id,
@@ -199,7 +198,7 @@ export function ProductsList() {
     }
 
     // Preparar dados para CSV
-    const csvData = filteredProducts.map(product => ({
+    const csvData = filteredProducts.map((product: any) => ({
       ID: product.id,
       Nome: product.name,
       'Descrição Curta': product.shortDescription || '',
@@ -221,7 +220,7 @@ export function ProductsList() {
     const headers = Object.keys(csvData[0])
     const csvContent = [
       headers.join(','),
-      ...csvData.map(row => 
+      ...csvData.map((row: any) => 
         headers.map(header => {
           const value = row[header as keyof typeof row]
           // Escapar aspas e vírgulas
@@ -412,7 +411,7 @@ export function ProductsList() {
       category: formData.get('category') as string,
       tags,
       images,
-      stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : undefined,
+                      // stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : undefined,
       inStock: formData.get('inStock') === 'on',
     }
 
@@ -522,7 +521,7 @@ export function ProductsList() {
             className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[150px]"
           >
             <option value="all">Todas categorias</option>
-            {categories.map((cat) => (
+            {categories.map((cat: any) => (
               <option key={cat.id} value={cat.slug}>
                 {cat.name}
               </option>
@@ -640,7 +639,7 @@ export function ProductsList() {
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((product) => (
+                  filteredProducts.map((product: any) => (
                     <tr key={product.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <input
@@ -671,7 +670,7 @@ export function ProductsList() {
                             <div className="text-sm text-gray-500 truncate">{product.shortDescription}</div>
                             {product.tags && product.tags.length > 0 && (
                               <div className="flex gap-1 mt-1">
-                                {product.tags.slice(0, 2).map((tag, idx) => (
+                                {product.tags.slice(0, 2).map((tag: string, idx: number) => (
                                   <span key={idx} className="inline-block px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
                                     {tag}
                                   </span>
@@ -685,7 +684,7 @@ export function ProductsList() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {categories.find(c => c.slug === product.category)?.name || product.category}
+                        {categories.find((c: any) => c.slug === product.category)?.name || product.category}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">€{product.price.toFixed(2)}</div>
@@ -771,7 +770,7 @@ export function ProductsList() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredProducts.length === 0 ? (
-                <div className="col-span-full flex flex-col items-center justify-center py-12">
+                  <div className="col-span-full flex flex-col items-center justify-center py-12">
                   <Package className="w-16 h-16 text-gray-300 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum produto encontrado</h3>
                   <p className="text-gray-500 mb-4">Tente ajustar os filtros ou criar um novo produto</p>
@@ -780,8 +779,8 @@ export function ProductsList() {
                     Criar primeiro produto
                   </Button>
                 </div>
-              ) : (
-                filteredProducts.map((product) => (
+                ) : (
+                  filteredProducts.map((product: any) => (
                   <div key={product.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="relative">
                       <input
@@ -856,7 +855,8 @@ export function ProductsList() {
                       </div>
                     </div>
                   </div>
-                ))
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -949,7 +949,7 @@ export function ProductsList() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Selecione uma categoria</option>
-                    {categories.map((cat) => (
+                    {categories.map((cat: any) => (
                       <option key={cat.id} value={cat.slug}>
                         {cat.name}
                       </option>
@@ -996,7 +996,7 @@ export function ProductsList() {
                     <Input
                       type="number"
                       name="stock"
-                      defaultValue={editing?.stock || 0}
+                      defaultValue={(editing as any)?.stock || 0}
                       min="0"
                       className="w-full"
                     />
