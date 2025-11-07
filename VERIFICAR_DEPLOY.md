@@ -1,160 +1,92 @@
-# ✅ Secrets Configurados - Próximos Passos
+# 🔍 Como Verificar se o Deploy Iniciou
 
-## ✅ Status Atual
+## 📋 Passos para Verificar
 
-Seus secrets estão configurados:
-- ✅ `CLOUDFLARE_ACCOUNT_ID` (atualizado há 6 horas)
-- ✅ `CLOUDFLARE_API_TOKEN` (atualizado há 6 horas)
+### 1. Acesse o GitHub Actions
+**URL:** https://github.com/davescript/ecommerce-leiasabores/actions
 
----
+### 2. Verifique os Workflows
 
-## 🔍 Por que o Deploy Não Iniciou?
+Você tem **2 workflows** configurados:
 
-O deploy só roda se **TODOS** os jobs de dependência passarem.
+#### A. `deploy.yml` (Build & Deploy)
+- ✅ Mais simples e direto
+- ✅ Deve executar quando você faz push para `main`
+- ✅ Jobs: `validate` → `build` → `deploy`
 
-### Deploy Frontend precisa de:
-- ✅ `lint-and-format` → **DEVE PASSAR**
-- ✅ `type-check` → **DEVE PASSAR**
-- ✅ `unit-tests` → **DEVE PASSAR**
-- ✅ `e2e-tests` → **DEVE PASSAR**
-- ✅ `build-frontend` → **DEVE PASSAR**
+#### B. `ci.yml` (CI/CD Pipeline)
+- ⚠️ Mais completo, com muitos testes
+- ⚠️ Pode estar falhando e impedindo o deploy
+- ⚠️ Jobs: `lint-and-format`, `type-check`, `unit-tests`, `e2e-tests`, `build-frontend`, `build-backend`, `deploy-frontend`, `deploy-backend`
 
-### Deploy Backend precisa de:
-- ✅ `lint-and-format` → **DEVE PASSAR**
-- ✅ `type-check` → **DEVE PASSAR**
-- ✅ `unit-tests` → **DEVE PASSAR**
+### 3. O Que Verificar
 
-**Se qualquer um falhar, o deploy NÃO inicia!**
+#### ✅ Se o Workflow Está Executando:
+- Você deve ver um workflow run com status **"In progress"** (amarelo) ou **"Completed"** (verde)
+- O workflow deve ter o nome do commit: `fix: limpar diretório de build e corrigir emptyOutDir`
 
----
+#### ❌ Se o Workflow NÃO Está Executando:
+- **Possível causa:** Workflow não está sendo acionado
+- **Solução:** Verifique se o commit foi feito na branch `main`
+- **Solução:** Verifique se o arquivo `.github/workflows/deploy.yml` existe
 
-## 🛠️ Como Verificar o Problema
+#### ⚠️ Se o Workflow Está Falhando:
+- **Possível causa:** Testes falhando (lint, type-check, unit-tests, e2e-tests)
+- **Solução:** Veja os logs do job que está falhando
+- **Solução:** O `deploy.yml` é mais simples e pode funcionar mesmo se `ci.yml` falhar
 
-### 1. Acessar GitHub Actions
+### 4. Verificar Secrets do GitHub
 
-1. Vá para: `https://github.com/davescript/ecommerce-leiasabores/actions`
-2. Clique no workflow mais recente (provavelmente "CI/CD Pipeline #1")
-3. Veja quais jobs estão:
-   - ✅ Verde (passou)
-   - ❌ Vermelho (falhou)
-   - ⚠️ Amarelo (warning/em progresso)
+O deploy precisa destes secrets configurados:
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
 
-### 2. Identificar Job que Falhou
+**Como verificar:**
+1. Vá em: Settings → Secrets and variables → Actions
+2. Verifique se os secrets estão configurados
 
-Clique no job que está vermelho ou amarelo e veja os logs.
+### 5. Forçar Execução Manual (Se Necessário)
 
-**Problemas comuns:**
+Se o workflow não estiver executando automaticamente, você pode:
 
-#### A) Lint Failed
-```
-Error: ESLint found problems
-```
-**Solução:** Corrija os erros de lint ou ajuste o workflow
+1. **Fazer um commit vazio:**
+   ```bash
+   git commit --allow-empty -m "trigger: forçar deploy"
+   git push origin main
+   ```
 
-#### B) Type Check Failed
-```
-Error: TypeScript compilation failed
-```
-**Solução:** Corrija os erros de TypeScript
+2. **Ou usar a ação manual do GitHub:**
+   - Vá em Actions → Build & Deploy
+   - Clique em "Run workflow"
+   - Selecione a branch `main`
+   - Clique em "Run workflow"
 
-#### C) Tests Failed
-```
-Error: Test suite failed to run
-```
-**Solução:** Corrija os testes ou ajuste o workflow
+## 🚨 Problemas Comuns
 
-#### D) Build Failed
-```
-Error: Build failed
-```
-**Solução:** Verifique erros de build
+### Problema 1: Workflow Não Inicia
+**Causa:** Commit não foi feito na branch `main`
+**Solução:** Verifique com `git branch` e `git status`
 
----
+### Problema 2: Workflow Falha no Validate
+**Causa:** Erros de lint ou type-check
+**Solução:** Veja os logs e corrija os erros
 
-## 🚀 Soluções Rápidas
+### Problema 3: Workflow Falha no Build
+**Causa:** Erro no build do frontend ou backend
+**Solução:** Veja os logs e corrija os erros
 
-### Opção 1: Ver Logs e Corrigir
+### Problema 4: Workflow Falha no Deploy
+**Causa:** Secrets não configurados ou inválidos
+**Solução:** Verifique os secrets no GitHub
 
-1. Veja os logs do workflow no GitHub
-2. Identifique qual job falhou
-3. Corrija o problema
-4. Faça commit e push novamente
+## 📞 Próximos Passos
 
-### Opção 2: Ajustar Workflow (Temporário)
-
-Se você quer que o deploy rode mesmo se alguns testes falharem:
-
-```yaml
-# Em .github/workflows/ci.yml
-
-deploy-frontend:
-  needs: [build-frontend]  # Só precisa do build
-  if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-
-deploy-backend:
-  needs: []  # Não precisa de dependências
-  if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-```
-
-**⚠️ CUIDADO:** Isso faz deploy mesmo se testes falharem!
-
-### Opção 3: Deploy Manual (Enquanto Corrige)
-
-```bash
-# Backend
-npm run deploy
-
-# Frontend
-npm run build:frontend
-wrangler pages deploy dist/public --project-name=leiasabores
-```
-
----
-
-## 📋 Checklist de Verificação
-
-- [x] Secrets configurados ✅
-- [ ] Verificar logs do workflow no GitHub
-- [ ] Identificar qual job falhou
-- [ ] Corrigir o problema (lint, tests, type-check, etc.)
-- [ ] Fazer push novamente
-- [ ] Verificar se deploy iniciou
-
----
-
-## 💡 Dica
-
-**Para ver o que está acontecendo em tempo real:**
-
-1. GitHub → Actions
-2. Clique no workflow rodando
-3. Veja os jobs em tempo real
-4. Clique em cada job para ver os logs
-
----
-
-## 🔍 Comandos para Testar Localmente
-
-Antes de fazer push, teste localmente:
-
-```bash
-# Testar lint
-npm run lint
-
-# Testar type-check
-npm run type-check
-
-# Testar unit tests
-npm run test:unit
-
-# Testar E2E (precisa do frontend rodando)
-npm run dev:frontend  # Em um terminal
-npm run test:e2e     # Em outro terminal
-```
-
-Se todos passarem localmente, devem passar no CI também!
+1. **Acesse:** https://github.com/davescript/ecommerce-leiasabores/actions
+2. **Verifique** se há um workflow run recente
+3. **Clique** no workflow run para ver os detalhes
+4. **Veja** qual job está falhando (se houver)
+5. **Envie** uma screenshot ou me diga o que você vê
 
 ---
 
 **Última atualização:** 7 de Novembro de 2025
-
