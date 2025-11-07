@@ -10,6 +10,7 @@ import uploadsRoutes from './routes/uploads'
 import adminRoutes from './routes/admin'
 import r2Routes from './routes/r2'
 import r2AutoSyncRoutes from './routes/r2-auto-sync'
+import seedPartylandRoutes from './routes/seed-partyland'
 import categoriesRoutes from './routes/categories'
 import { errorHandler } from './middleware/errorHandler'
 import { getDb, dbSchema, type DrizzleSchema } from './lib/db'
@@ -426,6 +427,7 @@ app.route('/api/uploads', uploadsRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/r2', r2Routes)
 app.route('/api/r2-auto-sync', r2AutoSyncRoutes)
+app.route('/api/admin', seedPartylandRoutes)
 app.route('/api/categories', categoriesRoutes)
 
 // Health endpoint sob o prefixo /api para funcionar com rotas de produção
