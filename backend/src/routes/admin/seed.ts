@@ -4,7 +4,7 @@ import { getDb } from '../../lib/db'
 import { adminUsers, rateLimits } from '../../models/schema'
 import { hashPassword } from '../../utils/bcrypt'
 import { generateId } from '../../utils/id'
-import { eq, like } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 const seed = new Hono<{ Bindings: WorkerBindings }>()
 

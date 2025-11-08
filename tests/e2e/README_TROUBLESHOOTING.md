@@ -46,12 +46,24 @@ curl -X POST https://api.leiasabores.pt/api/v1/admin/seed \
   ```
 - Certifique-se de que o admin user existe com essas credenciais
 
-#### 4. Rate Limiting
+#### 4. Rate Limiting ⚠️ **MAIS COMUM**
 **Sintoma:** Status 429 "Too many requests"
 
 **Solução:**
-- Aguarde alguns minutos antes de rodar os testes novamente
-- Ajuste o rate limit no backend se necessário
+- ✅ **SOLUÇÃO AUTOMÁTICA:** Os testes agora incluem headers `X-Test-Mode` e `X-Playwright-Test` que fazem bypass do rate limiting
+- Se ainda ocorrer, limpe os rate limits:
+  ```bash
+  # Via script
+  ./scripts/clear-rate-limits.sh
+  
+  # Ou via wrangler
+  wrangler d1 execute ecommerce_db --remote --command "DELETE FROM rate_limits"
+  
+  # Ou via API (após deploy)
+  curl -X POST https://api.leiasabores.pt/api/v1/admin/seed/clear-rate-limits \
+    -H "X-Test-Mode: true"
+  ```
+- ⚠️ **IMPORTANTE:** Certifique-se de que o código foi deployado (o bypass só funciona após deploy)
 
 #### 5. CORS ou Network Issues
 **Sintoma:** Erro de rede ou CORS
@@ -66,13 +78,15 @@ curl -X POST https://api.leiasabores.pt/api/v1/admin/seed \
 ```bash
 curl -X POST https://api.leiasabores.pt/api/v1/admin/auth/login \
   -H "Content-Type: application/json" \
+  -H "X-Test-Mode: true" \
+  -H "X-Playwright-Test: true" \
   -d '{"email":"admin@leiasabores.pt","password":"admin123"}'
 ```
 
 2. **Verificar se admin user existe:**
 ```bash
 # Via wrangler (se tiver acesso)
-wrangler d1 execute ecommerce_db --command "SELECT * FROM admin_users WHERE email = 'admin@leiasabores.pt'"
+wrangler d1 execute ecommerce_db --remote --command "SELECT * FROM admin_users WHERE email = 'admin@leiasabores.pt'"
 ```
 
 3. **Rodar testes com mais verbosidade:**
@@ -107,13 +121,17 @@ PLAYWRIGHT_API_URL=https://api.leiasabores.pt/api
 - [ ] Credenciais de teste estão corretas
 - [ ] Variáveis de ambiente estão configuradas
 - [ ] Frontend está rodando (se necessário)
-- [ ] Não há rate limiting bloqueando
+- [ ] **Código foi deployado (para bypass de rate limiting funcionar)**
+- [ ] **Rate limits foram limpos (se necessário)**
 
 ### Comandos Úteis
 
 ```bash
 # Verificar se admin user existe
 npm run seed:admin
+
+# Limpar rate limits
+./scripts/clear-rate-limits.sh
 
 # Rodar testes com debug
 DEBUG=pw:api npm run test:e2e -- --debug
@@ -125,3 +143,30 @@ npx playwright test tests/e2e/auth/
 npm run test:e2e:report
 ```
 
+## 🆘 Solução Rápida para Rate Limiting
+
+Se você está recebendo "Too many requests":
+
+1. **Limpar rate limits:**
+```bash
+./scripts/clear-rate-limits.sh --remote
+```
+
+2. **Verificar se headers de teste estão sendo enviados:**
+Os testes E2E devem incluir automaticamente os headers `X-Test-Mode` e `X-Playwright-Test`.
+
+3. **Fazer deploy do código:**
+```bash
+wrangler deploy
+```
+
+4. **Rodar testes novamente:**
+```bash
+npm run test:e2e
+```
+
+## 📚 Documentação Adicional
+
+- `RATE_LIMIT_FIX.md` - Detalhes completos da correção do rate limiting
+- `DEPLOY_RATE_LIMIT_FIX.md` - Guia de deploy da correção
+- `E2E_TESTES_COMPLETO.md` - Documentação completa dos testes E2E
