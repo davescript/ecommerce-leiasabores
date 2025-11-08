@@ -132,9 +132,18 @@ test.describe('Editar Produto', () => {
 
     // Obter categorias disponíveis
     const categories = await apiHelper.listCategories()
-    const otherCategory = categories.find((c: any) => c.slug !== TEST_PRODUCT.category)
+    const otherCategory = categories.categories?.find((c: any) => c.slug !== TEST_PRODUCT.category)
 
     if (!otherCategory) {
+      // Se não houver outra categoria, criar uma ou usar a primeira disponível
+      if (categories.categories && categories.categories.categories?.length > 0) {
+        const firstCategory = categories.categories.categories?.[0]
+        const updatedProduct = await apiHelper.updateProduct(createdProductId, {
+          category: firstCategory.slug,
+        })
+        expect(updatedProduct.category).toBe(firstCategory.slug)
+        return
+      }
       test.skip()
       return
     }

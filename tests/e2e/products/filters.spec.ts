@@ -14,8 +14,8 @@ test.describe('Filtros e Busca de Produtos', () => {
 
     // Obter categorias
     const categories = await apiHelper.listCategories()
-    if (categories.categories && categories.categories.length > 0) {
-      const category = categories.categories[0]
+    if (categories.categories && categories.categories.categories?.length > 0) {
+      const category = categories.categories.categories?.[0]
       
       // Filtrar por categoria (se houver filtro na UI)
       const categoryFilter = adminPage.locator('select, [role="combobox"], button').filter({ hasText: /categoria|category/i }).first()

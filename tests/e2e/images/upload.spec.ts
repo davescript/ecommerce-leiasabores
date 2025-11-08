@@ -115,7 +115,8 @@ test.describe('Upload de Imagens R2', () => {
   })
 
   test('deve rejeitar upload de arquivo muito grande', async ({ adminPage, adminApi }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
     await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
@@ -137,7 +138,8 @@ test.describe('Upload de Imagens R2', () => {
   })
 
   test('deve rejeitar upload de tipo de arquivo inválido', async ({ adminPage, adminApi }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
     await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
@@ -159,7 +161,8 @@ test.describe('Upload de Imagens R2', () => {
   })
 
   test('deve deletar imagem do produto', async ({ adminPage, adminApi }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
     await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
@@ -196,7 +199,8 @@ test.describe('Upload de Imagens R2', () => {
   })
 
   test('deve validar URL pública da imagem após upload', async ({ adminPage, adminApi }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
     await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
