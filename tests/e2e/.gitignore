@@ -1,0 +1,15 @@
+# Test results
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Screenshots
+screenshots/
+videos/
+
+# Fixtures temporários
+fixtures/temp-*
+
+# Logs
+*.log
+

@@ -1,100 +1,215 @@
-# Testes E2E - Playwright
+# 🧪 Testes E2E - Admin Panel E-commerce
 
-## ⚠️ IMPORTANTE
+## 📋 Estrutura de Testes
 
-Os testes E2E requerem que o servidor frontend esteja rodando. O Playwright tentará iniciar o servidor automaticamente, mas se você já tiver um servidor rodando na porta 5173, ele será reutilizado.
+```
+tests/e2e/
+├── fixtures/
+│   ├── admin-auth.ts       # Fixtures de autenticação
+│   └── test-image.png      # Imagem de teste
+├── helpers/
+│   ├── api-helpers.ts      # Helper para chamadas de API
+│   ├── page-helpers.ts     # Helper para interações com páginas
+│   └── test-data.ts        # Dados de teste
+├── auth/
+│   └── login.spec.ts       # Testes de login e autenticação
+├── products/
+│   ├── create.spec.ts      # Testes de criação de produtos
+│   ├── edit.spec.ts        # Testes de edição de produtos
+│   └── delete.spec.ts      # Testes de exclusão de produtos
+├── categories/
+│   └── crud.spec.ts        # Testes de CRUD de categorias
+├── images/
+│   └── upload.spec.ts      # Testes de upload de imagens R2
+├── coupons/
+│   └── crud.spec.ts        # Testes de CRUD de cupons
+├── orders/
+│   └── crud.spec.ts        # Testes de pedidos
+├── customers/
+│   └── crud.spec.ts        # Testes de clientes
+├── dashboard/
+│   └── stats.spec.ts       # Testes do dashboard
+├── api/
+│   └── products-api.spec.ts # Testes diretos da API
+└── sync/
+    └── admin-public-sync.spec.ts # Testes de sincronização
+```
 
-## Como executar
+## 🚀 Como Executar
 
-### 1. Executar todos os testes E2E
+### Instalar dependências
+```bash
+npm install
+```
+
+### Executar todos os testes
 ```bash
 npm run test:e2e
 ```
 
-### 2. Executar com UI (modo interativo)
+### Executar testes em modo UI
 ```bash
 npm run test:e2e:ui
 ```
 
-### 3. Executar em modo debug
+### Executar testes em modo debug
 ```bash
 npm run test:e2e:debug
 ```
 
-### 4. Executar apenas um arquivo de teste
+### Executar testes específicos
 ```bash
-npx playwright test tests/e2e/home.spec.ts
+npx playwright test tests/e2e/products/create.spec.ts
 ```
 
-### 5. Executar apenas um navegador
+### Executar testes em navegador específico
 ```bash
 npx playwright test --project=chromium
 ```
 
-## Configuração
+## ⚙️ Configuração
 
-O arquivo `playwright.config.ts` está configurado para:
-- Iniciar automaticamente o servidor frontend (`npm run dev:frontend`)
-- Usar `http://localhost:5173` como baseURL
-- Testar em 5 navegadores: Chrome, Firefox, Safari, Mobile Chrome, Mobile Safari
-- Gerar screenshots apenas em falhas
-- Gerar vídeos apenas em falhas
-- Reutilizar servidor existente (se já estiver rodando)
+### Variáveis de Ambiente
 
-## Solução de problemas
-
-### Erro: "Cannot navigate to invalid URL"
-**Causa:** O servidor frontend não está rodando ou não está acessível na porta 5173.
-
-**Solução:**
-1. Inicie o servidor manualmente:
-   ```bash
-   npm run dev:frontend
-   ```
-2. Aguarde até ver "Local: http://localhost:5173"
-3. Execute os testes novamente
-
-### Erro: "Port 5173 is already in use"
-**Causa:** Outro processo está usando a porta 5173.
-
-**Solução:**
-1. Encontre o processo:
-   ```bash
-   lsof -ti:5173
-   ```
-2. Mate o processo:
-   ```bash
-   kill -9 $(lsof -ti:5173)
-   ```
-3. Execute os testes novamente
-
-### Testes muito lentos
-**Causa:** Múltiplos navegadores sendo testados em paralelo.
-
-**Solução:**
-1. Execute apenas um navegador:
-   ```bash
-   npx playwright test --project=chromium
-   ```
-2. Ou reduza o número de workers:
-   ```bash
-   npx playwright test --workers=1
-   ```
-
-## Estrutura dos testes
-
-- `home.spec.ts` - Página inicial
-- `catalog.spec.ts` - Catálogo e filtros
-- `product.spec.ts` - Página de produto
-- `cart.spec.ts` - Carrinho
-- `checkout.spec.ts` - Checkout
-- `admin.spec.ts` - Painel admin
-- `404.spec.ts` - Página 404
-
-## Relatórios
-
-Após executar os testes, você pode ver o relatório HTML:
 ```bash
-npx playwright show-report
+# URL base do frontend
+PLAYWRIGHT_TEST_BASE_URL=http://localhost:5173
+
+# URL da API
+PLAYWRIGHT_API_URL=https://api.leiasabores.pt/api
 ```
 
+### Credenciais de Teste
+
+As credenciais padrão estão em `tests/e2e/fixtures/admin-auth.ts`:
+
+```typescript
+TEST_ADMIN_CREDENTIALS = {
+  email: 'admin@leiasabores.pt',
+  password: 'admin123',
+}
+```
+
+## 📝 Estrutura dos Testes
+
+### Fixtures
+
+Fixtures fornecem autenticação automática e helpers:
+
+```typescript
+test('meu teste', async ({ adminPage, adminApi, adminToken }) => {
+  // adminPage: Page autenticada
+  // adminApi: APIRequestContext para chamadas de API
+  // adminToken: Token de autenticação
+})
+```
+
+### Helpers
+
+#### AdminAPIHelper
+Helper para chamadas de API:
+
+```typescript
+const apiHelper = new AdminAPIHelper(adminApi, baseURL, adminToken)
+const product = await apiHelper.createProduct({ name: 'Produto Teste', price: 10 })
+```
+
+#### AdminPageHelper
+Helper para interações com páginas:
+
+```typescript
+const pageHelper = new AdminPageHelper(page)
+await pageHelper.goToProducts()
+await pageHelper.clickButton('Salvar')
+```
+
+## ✅ Testes Implementados
+
+### Autenticação
+- [x] Login válido
+- [x] Login inválido
+- [x] Logout
+- [x] Sessão persistente
+- [x] RBAC (admin, editor, viewer)
+
+### Produtos
+- [x] Criar produto
+- [x] Editar produto (nome, preço, descrição, categoria, status)
+- [x] Deletar produto
+- [x] Validações (campos obrigatórios, preço, preço promocional)
+- [x] Upload de imagem
+- [x] Sincronização com site público
+
+### Categorias
+- [x] Criar categoria
+- [x] Editar categoria
+- [x] Criar subcategoria
+- [x] Deletar categoria (com validação de produtos)
+
+### Imagens R2
+- [x] Upload de imagem válida
+- [x] Validação de tamanho (10MB)
+- [x] Validação de tipo MIME
+- [x] Deletar imagem
+- [x] URL pública válida
+
+### Cupons
+- [x] Criar cupom
+- [x] Validação de datas
+- [x] Validação de código único
+
+### Pedidos
+- [x] Listar pedidos
+- [x] Atualizar status
+
+### Clientes
+- [x] Listar clientes
+- [x] Editar cliente
+
+### Dashboard
+- [x] Carregar estatísticas
+- [x] Exibir gráficos sem erros
+
+### API
+- [x] Testes diretos da API
+- [x] Validação de autenticação
+- [x] Validação de erros (400, 401, 403, 404, 500)
+
+### Sincronização
+- [x] Atualização de produto → site público
+- [x] Cache busting
+
+## 🔧 Troubleshooting
+
+### Erro: "Test timeout"
+Aumente o timeout no `playwright.config.ts`:
+
+```typescript
+timeout: 60 * 1000, // 60 segundos
+```
+
+### Erro: "Element not found"
+Use seletores mais específicos ou aguarde elementos carregarem:
+
+```typescript
+await page.waitForSelector('selector', { timeout: 10000 })
+```
+
+### Erro: "401 Unauthorized"
+Verifique se as credenciais de teste estão corretas e se o admin user existe no banco.
+
+## 📊 Relatórios
+
+Após executar os testes, os relatórios estarão em:
+
+- **HTML**: `playwright-report/index.html`
+- **JSON**: `test-results/results.json`
+- **JUnit**: `test-results/junit.xml`
+
+## 🎯 Próximos Passos
+
+1. Adicionar mais testes de stress
+2. Adicionar testes de dark mode
+3. Adicionar testes de configurações
+4. Adicionar snapshots visuais
+5. Adicionar testes de performance
