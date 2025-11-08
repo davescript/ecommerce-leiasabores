@@ -38,11 +38,11 @@ test.describe('Upload de Imagens R2', () => {
   test.afterEach(async ({ adminApi }) => {
     // Limpar produto de teste após cada teste
     if (createdProductId) {
-      const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
-      const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
-      await apiHelper.login('admin@leiasabores.pt', 'admin123')
-      try {
-        await apiHelper.login('admin@leiasabores.pt', 'admin123')
+       const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+       const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+       await apiHelper.login('admin@leiasabores.pt', 'admin123')
+       
+       try {
         await apiHelper.deleteProduct(createdProductId)
       } catch (error) {
         // Ignore errors in cleanup

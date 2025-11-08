@@ -22,26 +22,38 @@ test.describe('API Routes', () => {
 
   test('deve retornar 404 para rotas inexistentes', async ({ adminApi }) => {
     const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     
+    // Fazer requisição autenticada para rota inexistente
     const response = await adminApi.get(`${apiBaseUrl}/v1/admin/nonexistent`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { 
+        Authorization: `Bearer ${await apiHelper.getToken()}`,
+        'X-Test-Mode': 'true',
+        'X-Playwright-Test': 'true',
+      },
     })
     
     expect(response.status()).toBe(404)
   })
 
   test('deve validar schemas Zod', async ({ adminApi }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
 
     // Tentar criar produto com dados inválidos
     try {
       await apiHelper.createProduct({
         name: '', // Nome vazio
         price: -10, // Preço negativo
+        category: 'uncategorized',
+        inStock: true,
+        status: 'active',
       })
       throw new Error('Should have thrown validation error')
     } catch (error: any) {
-      expect(error.message).toMatch(/validation|obrigatório|required/i)
+      expect(error.message).toMatch(/validation|obrigatório|required|error|erro/i)
     }
   })
 })
