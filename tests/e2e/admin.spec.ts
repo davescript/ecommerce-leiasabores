@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/admin-auth'
+import { test, expect } from './fixtures/admin-auth'
 
 test.describe('Admin Panel', () => {
   test('should require authentication', async ({ page }) => {
