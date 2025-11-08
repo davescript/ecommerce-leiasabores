@@ -10,13 +10,11 @@ test.describe('Editar Produto', () => {
   let createdProductId: string
   let createdProductName: string
 
-  test.beforeEach(async ({ adminApi, adminToken }) => {
+  test.beforeEach(async ({ adminApi }) => {
     // Criar produto de teste antes de cada teste
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
 
     createdProductName = generateTestProductName()
     const product = await apiHelper.createProduct({
@@ -31,15 +29,14 @@ test.describe('Editar Produto', () => {
     createdProductId = product.id
   })
 
-  test.afterEach(async ({ adminApi, adminToken }) => {
+  test.afterEach(async ({ adminApi }) => {
     // Limpar produto de teste após cada teste
     if (createdProductId) {
-      const apiHelper = new AdminAPIHelper(
-        adminApi,
-        process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-        adminToken
-      )
+      const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+      const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+      await apiHelper.login('admin@leiasabores.pt', 'admin123')
       try {
+        await apiHelper.login('admin@leiasabores.pt', 'admin123')
         await apiHelper.deleteProduct(createdProductId)
       } catch (error) {
         // Ignore errors in cleanup
@@ -47,12 +44,10 @@ test.describe('Editar Produto', () => {
     }
   })
 
-  test('deve editar nome do produto', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve editar nome do produto', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     await pageHelper.goToProducts()
@@ -79,12 +74,10 @@ test.describe('Editar Produto', () => {
     await expect(adminPage.getByText(newName)).toBeVisible({ timeout: 10000 })
   })
 
-  test('deve editar preço do produto', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve editar preço do produto', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     await pageHelper.goToProducts()
@@ -106,12 +99,10 @@ test.describe('Editar Produto', () => {
     expect(updatedProduct.price).toBe(newPrice)
   })
 
-  test('deve editar descrição do produto', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve editar descrição do produto', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     await pageHelper.goToProducts()
@@ -133,12 +124,10 @@ test.describe('Editar Produto', () => {
     expect(updatedProduct.description).toBe(newDescription)
   })
 
-  test('deve editar categoria do produto', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve editar categoria do produto', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     // Obter categorias disponíveis
@@ -168,12 +157,10 @@ test.describe('Editar Produto', () => {
     expect(updatedProduct.category).toBe(otherCategory.slug)
   })
 
-  test('deve editar status do produto', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve editar status do produto', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     await pageHelper.goToProducts()
@@ -194,12 +181,10 @@ test.describe('Editar Produto', () => {
     expect(updatedProduct.status).toBe('inactive')
   })
 
-  test('deve fazer upload de imagem e atualizar produto', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve fazer upload de imagem e atualizar produto', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     // Criar imagem de teste (1x1 pixel PNG em base64)
@@ -227,12 +212,10 @@ test.describe('Editar Produto', () => {
     }
   })
 
-  test('deve atualizar produto e refletir no site público', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve atualizar produto e refletir no site público', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     await pageHelper.goToProducts()

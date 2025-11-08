@@ -4,7 +4,8 @@ import { AdminPageHelper } from '../helpers/page-helpers'
 
 test.describe('Dashboard', () => {
   test('deve carregar estatísticas', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api', adminToken)
+    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     await pageHelper.goToDashboard()

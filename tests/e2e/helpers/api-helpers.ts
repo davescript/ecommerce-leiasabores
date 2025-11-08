@@ -4,11 +4,17 @@ import type { APIRequestContext } from '@playwright/test'
  * Helper para chamadas de API do admin
  */
 export class AdminAPIHelper {
+  private token: string | null = null
+
   constructor(
     private api: APIRequestContext,
     private baseURL: string,
-    private token: string
-  ) {}
+    token?: string
+  ) {
+    if (token) {
+      this.token = token
+    }
+  }
 
   /**
    * Fazer login e obter token
@@ -23,29 +29,48 @@ export class AdminAPIHelper {
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Login failed: ${error.error || response.statusText()}`)
     }
 
-    return await response.json()
+    const data = await response.json()
+    this.token = data.accessToken || data.token
+    return data
+  }
+
+  /**
+   * Obter token (faz login se não tiver token)
+   */
+  async getToken(): Promise<string> {
+    if (!this.token) {
+      // Token será definido no login
+      throw new Error('Token not available. Call login() first.')
+    }
+    return this.token
   }
 
   /**
    * Fazer logout
    */
   async logout(refreshToken?: string): Promise<void> {
-    await this.api.post(`${this.baseURL}/v1/admin/auth/logout`, {
-      headers: { Authorization: `Bearer ${this.token}` },
-      data: { refreshToken },
-    })
+    if (!this.token) return
+    try {
+      await this.api.post(`${this.baseURL}/v1/admin/auth/logout`, {
+        headers: { Authorization: `Bearer ${this.token}` },
+        data: { refreshToken },
+      })
+    } catch (error) {
+      // Ignore logout errors
+    }
   }
 
   /**
    * Obter usuário atual
    */
   async getMe(): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.get(`${this.baseURL}/v1/admin/auth/me`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -59,13 +84,14 @@ export class AdminAPIHelper {
    * Criar produto
    */
   async createProduct(data: any): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.post(`${this.baseURL}/v1/admin/products`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data,
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Create product failed: ${error.error || response.statusText()}`)
     }
 
@@ -76,13 +102,14 @@ export class AdminAPIHelper {
    * Atualizar produto
    */
   async updateProduct(id: string, data: any): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.put(`${this.baseURL}/v1/admin/products/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data,
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Update product failed: ${error.error || response.statusText()}`)
     }
 
@@ -93,12 +120,13 @@ export class AdminAPIHelper {
    * Deletar produto
    */
   async deleteProduct(id: string): Promise<void> {
+    const token = await this.getToken()
     const response = await this.api.delete(`${this.baseURL}/v1/admin/products/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Delete product failed: ${error.error || response.statusText()}`)
     }
   }
@@ -107,8 +135,9 @@ export class AdminAPIHelper {
    * Obter produto
    */
   async getProduct(id: string): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.get(`${this.baseURL}/v1/admin/products/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -122,6 +151,7 @@ export class AdminAPIHelper {
    * Listar produtos
    */
   async listProducts(params?: { page?: number; limit?: number; search?: string; category?: string }): Promise<any> {
+    const token = await this.getToken()
     const queryParams = new URLSearchParams()
     if (params?.page) queryParams.set('page', params.page.toString())
     if (params?.limit) queryParams.set('limit', params.limit.toString())
@@ -129,7 +159,7 @@ export class AdminAPIHelper {
     if (params?.category) queryParams.set('category', params.category)
 
     const response = await this.api.get(`${this.baseURL}/v1/admin/products?${queryParams.toString()}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -143,13 +173,14 @@ export class AdminAPIHelper {
    * Criar categoria
    */
   async createCategory(data: any): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.post(`${this.baseURL}/v1/admin/categories`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data,
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Create category failed: ${error.error || response.statusText()}`)
     }
 
@@ -160,13 +191,14 @@ export class AdminAPIHelper {
    * Atualizar categoria
    */
   async updateCategory(id: string, data: any): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.put(`${this.baseURL}/v1/admin/categories/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data,
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Update category failed: ${error.error || response.statusText()}`)
     }
 
@@ -177,12 +209,13 @@ export class AdminAPIHelper {
    * Deletar categoria
    */
   async deleteCategory(id: string): Promise<void> {
+    const token = await this.getToken()
     const response = await this.api.delete(`${this.baseURL}/v1/admin/categories/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Delete category failed: ${error.error || response.statusText()}`)
     }
   }
@@ -191,8 +224,9 @@ export class AdminAPIHelper {
    * Listar categorias
    */
   async listCategories(): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.get(`${this.baseURL}/v1/admin/categories`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -206,13 +240,14 @@ export class AdminAPIHelper {
    * Criar cupom
    */
   async createCoupon(data: any): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.post(`${this.baseURL}/v1/admin/coupons`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data,
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Create coupon failed: ${error.error || response.statusText()}`)
     }
 
@@ -223,13 +258,14 @@ export class AdminAPIHelper {
    * Atualizar cupom
    */
   async updateCoupon(id: string, data: any): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.put(`${this.baseURL}/v1/admin/coupons/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data,
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Update coupon failed: ${error.error || response.statusText()}`)
     }
 
@@ -240,12 +276,13 @@ export class AdminAPIHelper {
    * Deletar cupom
    */
   async deleteCoupon(id: string): Promise<void> {
+    const token = await this.getToken()
     const response = await this.api.delete(`${this.baseURL}/v1/admin/coupons/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Delete coupon failed: ${error.error || response.statusText()}`)
     }
   }
@@ -296,13 +333,14 @@ export class AdminAPIHelper {
    * Deletar imagem
    */
   async deleteImage(id: string, key: string): Promise<void> {
+    const token = await this.getToken()
     const response = await this.api.delete(`${this.baseURL}/v1/admin/products/delete-image`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data: { id, key },
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Delete image failed: ${error.error || response.statusText()}`)
     }
   }
@@ -311,13 +349,14 @@ export class AdminAPIHelper {
    * Listar pedidos
    */
   async listOrders(params?: { page?: number; limit?: number; status?: string }): Promise<any> {
+    const token = await this.getToken()
     const queryParams = new URLSearchParams()
     if (params?.page) queryParams.set('page', params.page.toString())
     if (params?.limit) queryParams.set('limit', params.limit.toString())
     if (params?.status) queryParams.set('status', params.status)
 
     const response = await this.api.get(`${this.baseURL}/v1/admin/orders?${queryParams.toString()}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -331,13 +370,14 @@ export class AdminAPIHelper {
    * Atualizar status do pedido
    */
   async updateOrderStatus(orderId: string, status: string, notes?: string): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.put(`${this.baseURL}/v1/admin/orders/${orderId}/status`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data: { status, notes },
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Update order status failed: ${error.error || response.statusText()}`)
     }
 
@@ -348,13 +388,14 @@ export class AdminAPIHelper {
    * Listar clientes
    */
   async listCustomers(params?: { page?: number; limit?: number; search?: string }): Promise<any> {
+    const token = await this.getToken()
     const queryParams = new URLSearchParams()
     if (params?.page) queryParams.set('page', params.page.toString())
     if (params?.limit) queryParams.set('limit', params.limit.toString())
     if (params?.search) queryParams.set('search', params.search)
 
     const response = await this.api.get(`${this.baseURL}/v1/admin/customers?${queryParams.toString()}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -368,13 +409,14 @@ export class AdminAPIHelper {
    * Atualizar cliente
    */
   async updateCustomer(id: string, data: any): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.put(`${this.baseURL}/v1/admin/customers/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data,
     })
 
     if (!response.ok()) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: response.statusText() }))
       throw new Error(`Update customer failed: ${error.error || response.statusText()}`)
     }
 
@@ -385,8 +427,9 @@ export class AdminAPIHelper {
    * Obter estatísticas do dashboard
    */
   async getDashboardStats(): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.get(`${this.baseURL}/v1/admin/dashboard/stats`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -400,6 +443,7 @@ export class AdminAPIHelper {
    * Listar cupons
    */
   async listCoupons(params?: { page?: number; limit?: number; search?: string; active?: boolean }): Promise<any> {
+    const token = await this.getToken()
     const queryParams = new URLSearchParams()
     if (params?.page) queryParams.set('page', params.page.toString())
     if (params?.limit) queryParams.set('limit', params.limit.toString())
@@ -407,7 +451,7 @@ export class AdminAPIHelper {
     if (params?.active !== undefined) queryParams.set('active', params.active.toString())
 
     const response = await this.api.get(`${this.baseURL}/v1/admin/coupons?${queryParams.toString()}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -421,8 +465,9 @@ export class AdminAPIHelper {
    * Obter pedido
    */
   async getOrder(id: string): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.get(`${this.baseURL}/v1/admin/orders/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {
@@ -436,8 +481,9 @@ export class AdminAPIHelper {
    * Obter cliente
    */
   async getCustomer(id: string): Promise<any> {
+    const token = await this.getToken()
     const response = await this.api.get(`${this.baseURL}/v1/admin/customers/${id}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!response.ok()) {

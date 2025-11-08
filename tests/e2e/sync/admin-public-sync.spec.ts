@@ -4,7 +4,8 @@ import { TEST_PRODUCT, generateTestProductName } from '../helpers/test-data'
 
 test.describe('Sincronização Admin ↔ Site Público', () => {
   test('deve atualizar produto no admin e refletir no site público', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api', adminToken)
+    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
 
     // Criar produto
     const productName = generateTestProductName()

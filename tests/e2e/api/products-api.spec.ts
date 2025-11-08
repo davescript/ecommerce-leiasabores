@@ -4,14 +4,16 @@ import { TEST_PRODUCT, generateTestProductName } from '../helpers/test-data'
 
 test.describe('API - Produtos', () => {
   test('deve listar produtos', async ({ adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api', adminToken)
+    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const products = await apiHelper.listProducts()
     expect(products).toBeDefined()
     expect(products.products || products.data).toBeDefined()
   })
 
   test('deve criar produto via API', async ({ adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api', adminToken)
+    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const productName = generateTestProductName()
     const product = await apiHelper.createProduct({
       name: productName,

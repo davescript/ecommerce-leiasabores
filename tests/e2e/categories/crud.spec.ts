@@ -10,12 +10,10 @@ test.describe('Categorias CRUD', () => {
   let createdCategoryId: string
   let createdCategoryName: string
 
-  test('deve criar categoria', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve criar categoria', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     await pageHelper.goToCategories()
@@ -41,18 +39,27 @@ test.describe('Categorias CRUD', () => {
 
     // Verificar no banco de dados
     const categories = await apiHelper.listCategories()
-    const createdCategory = categories.find((c: any) => c.name === createdCategoryName)
+    const createdCategory = categories.categories?.find((c: any) => c.name === createdCategoryName)
     
     expect(createdCategory).toBeTruthy()
-    createdCategoryId = createdCategory.id
+    if (createdCategory) {
+      createdCategoryId = createdCategory.id
+    }
+    
+    // Cleanup
+    if (createdCategoryId) {
+      try {
+        await apiHelper.deleteCategory(createdCategoryId)
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
   })
 
-  test('deve editar categoria', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve editar categoria', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     // Criar categoria primeiro
@@ -83,20 +90,24 @@ test.describe('Categorias CRUD', () => {
     await adminPage.waitForTimeout(2000)
 
     // Verificar no banco de dados
-    const updatedCategory = await apiHelper.listCategories()
-    const foundCategory = updatedCategory.find((c: any) => c.id === createdCategoryId)
+    const updatedCategories = await apiHelper.listCategories()
+    const foundCategory = updatedCategories.categories?.find((c: any) => c.id === createdCategoryId)
     expect(foundCategory?.name).toBe(newName)
 
     // Cleanup
-    await apiHelper.deleteCategory(createdCategoryId)
+    if (createdCategoryId) {
+      try {
+        await apiHelper.deleteCategory(createdCategoryId)
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
   })
 
-  test('deve criar subcategoria', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve criar subcategoria', async ({ adminPage, adminApi }) => {
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    const apiHelper = new AdminAPIHelper(adminApi, apiBaseUrl)
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     // Criar categoria pai primeiro
@@ -132,12 +143,9 @@ test.describe('Categorias CRUD', () => {
     await apiHelper.deleteCategory(parentCategory.id)
   })
 
-  test('deve prevenir exclusão de categoria com produtos', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve prevenir exclusão de categoria com produtos', async ({ adminPage, adminApi }) => {
+    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     // Criar categoria
@@ -172,7 +180,7 @@ test.describe('Categorias CRUD', () => {
 
     // Verificar que categoria ainda existe
     const categories = await apiHelper.listCategories()
-    const foundCategory = categories.find((c: any) => c.id === category.id)
+    const foundCategory = categories.categories?.find((c: any) => c.id === category.id)
     expect(foundCategory).toBeTruthy()
 
     // Cleanup
@@ -180,12 +188,9 @@ test.describe('Categorias CRUD', () => {
     await apiHelper.deleteCategory(category.id)
   })
 
-  test('deve excluir categoria sem produtos', async ({ adminPage, adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+  test('deve excluir categoria sem produtos', async ({ adminPage, adminApi }) => {
+    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+    await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
 
     // Criar categoria sem produtos
@@ -213,14 +218,11 @@ test.describe('Categorias CRUD', () => {
     expect(foundCategory).toBeFalsy()
   })
 
-  test.afterEach(async ({ adminApi, adminToken }) => {
+  test.afterEach(async ({ adminApi }) => {
     // Cleanup: deletar categoria criada
     if (createdCategoryId) {
-      const apiHelper = new AdminAPIHelper(
-        adminApi,
-        process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-        adminToken
-      )
+      const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
+      await apiHelper.login('admin@leiasabores.pt', 'admin123')
       try {
         await apiHelper.deleteCategory(createdCategoryId)
       } catch (error) {

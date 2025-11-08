@@ -31,11 +31,7 @@ test.describe('API Routes', () => {
   })
 
   test('deve validar schemas Zod', async ({ adminApi, adminToken }) => {
-    const apiHelper = new AdminAPIHelper(
-      adminApi,
-      process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api',
-      adminToken
-    )
+    const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
 
     // Tentar criar produto com dados inválidos
     try {
