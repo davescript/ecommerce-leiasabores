@@ -224,6 +224,10 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       return c.json({ error: 'Category not found' }, 404)
     }
 
+    // Log raw body for debugging
+    console.log('Raw body received:', JSON.stringify(rawBody))
+    console.log('Category ID:', id)
+
     // Normalize data: convert empty strings to null for optional fields
     // Handle cases where fields might not be sent (undefined) vs sent as empty strings
     const normalizedBody: any = {
@@ -241,13 +245,29 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       normalizedBody.parentId = rawBody.parentId && typeof rawBody.parentId === 'string' && rawBody.parentId.trim() ? rawBody.parentId.trim() : null
     }
 
+    // Normalize name and slug if present
+    if (rawBody.name !== undefined && typeof rawBody.name === 'string') {
+      normalizedBody.name = rawBody.name.trim()
+    }
+    if (rawBody.slug !== undefined && typeof rawBody.slug === 'string') {
+      normalizedBody.slug = rawBody.slug.trim()
+    }
+
+    console.log('Normalized body:', JSON.stringify(normalizedBody))
+
     // Validate input with Zod (partial update allowed)
-    const validationResult = categoryUpdateSchema.safeParse({
-      ...normalizedBody,
+    // For updates, we should allow partial data and only validate what's provided
+    const validationData = {
       id,
-    })
+      ...normalizedBody,
+    }
+
+    console.log('Validation data:', JSON.stringify(validationData))
+
+    const validationResult = categoryUpdateSchema.safeParse(validationData)
 
     if (!validationResult.success) {
+      console.error('Validation failed:', validationResult.error.errors)
       return c.json({
         error: 'Validation error',
         details: validationResult.error.errors,
@@ -285,42 +305,72 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       }
     }
 
-    // Prepare update data
+    // Prepare update data - only include fields that are actually being updated
     const updateData: any = {
       updatedAt: new Date().toISOString(),
     }
 
-    if (name !== undefined) updateData.name = name
-    if (slug !== undefined) updateData.slug = slug
-    if (description !== undefined) updateData.description = description || null
-    if (image !== undefined) updateData.image = image || null
-    if (parentId !== undefined) updateData.parentId = parentId || null
-    if (displayOrder !== undefined) updateData.displayOrder = displayOrder || 0
+    if (name !== undefined && name !== null) updateData.name = name
+    if (slug !== undefined && slug !== null) updateData.slug = slug
+    if (description !== undefined) updateData.description = description === '' ? null : description
+    if (image !== undefined) updateData.image = image === '' ? null : image
+    if (parentId !== undefined) updateData.parentId = parentId === '' ? null : parentId
+    if (displayOrder !== undefined && displayOrder !== null) updateData.displayOrder = displayOrder
 
-    await db.update(categories)
-      .set(updateData)
-      .where(eq(categories.id, id))
+    console.log('Update data:', JSON.stringify(updateData))
 
-    // Bust cache
-    await bustCategoryCache(c.env)
+    // Perform the update
+    try {
+      await db.update(categories)
+        .set(updateData)
+        .where(eq(categories.id, id))
+      console.log('Category updated successfully')
+    } catch (updateError: any) {
+      console.error('Database update error:', updateError)
+      console.error('Update error message:', updateError.message)
+      console.error('Update error stack:', updateError.stack)
+      throw updateError
+    }
 
-    // Audit log
-    await createAuditLog(c.env, {
-      adminUserId: adminUser.adminUserId,
-      action: 'update',
-      resource: 'category',
-      resourceId: id,
-      details: {
-        name: body.name || category.name,
-        changes: Object.keys(body).filter(k => k !== 'id'),
-      },
-      ...getRequestInfo(c as any),
-    })
+    // Bust cache (don't fail if this fails)
+    try {
+      await bustCategoryCache(c.env)
+      console.log('Cache busted successfully')
+    } catch (cacheError: any) {
+      console.error('Cache bust error (non-fatal):', cacheError)
+      // Continue even if cache busting fails
+    }
 
+    // Audit log (don't fail if this fails)
+    try {
+      await createAuditLog(c.env, {
+        adminUserId: adminUser.adminUserId,
+        action: 'update',
+        resource: 'category',
+        resourceId: id,
+        details: {
+          name: body.name || category.name,
+          changes: Object.keys(body).filter(k => k !== 'id'),
+        },
+        ...getRequestInfo(c as any),
+      })
+      console.log('Audit log created successfully')
+    } catch (auditError: any) {
+      console.error('Audit log error (non-fatal):', auditError)
+      // Continue even if audit log fails
+    }
+
+    // Fetch updated category
     const updatedCategory = await db.query.categories.findFirst({
       where: eq(categories.id, id),
     })
 
+    if (!updatedCategory) {
+      console.error('Category not found after update - this should not happen')
+      return c.json({ error: 'Category not found after update' }, 404)
+    }
+
+    console.log('Category update completed successfully')
     return c.json(updatedCategory)
   } catch (error: any) {
     console.error('Update category error:', error)

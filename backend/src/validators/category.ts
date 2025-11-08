@@ -9,12 +9,27 @@ export const categorySchema = z.object({
   displayOrder: z.number().int().min(0).default(0),
 })
 
-export const categoryUpdateSchema = categorySchema.partial().extend({
+export const categoryUpdateSchema = z.object({
   id: z.string().min(1, 'ID da categoria é obrigatório'),
-  // Override to allow empty strings that will be converted to null
-  parentId: z.union([z.string(), z.null(), z.literal('')]).optional().transform(val => val === '' ? null : val),
-  description: z.union([z.string(), z.null(), z.literal('')]).optional().transform(val => val === '' ? null : val),
-  image: z.union([z.string().url(), z.null(), z.literal('')]).optional().transform(val => val === '' ? null : val),
+  // All fields are optional for updates
+  name: z.string().min(1, 'Nome da categoria é obrigatório').max(200, 'Nome muito longo').optional(),
+  slug: z.string().min(1, 'Slug é obrigatório').max(200, 'Slug muito longo').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens').optional(),
+  description: z.union([
+    z.string().max(1000, 'Descrição muito longa'),
+    z.null(),
+    z.literal('')
+  ]).optional().transform(val => (val === '' || val === undefined) ? null : val),
+  image: z.union([
+    z.string().url('URL de imagem inválida'),
+    z.null(),
+    z.literal('')
+  ]).optional().transform(val => (val === '' || val === undefined) ? null : val),
+  parentId: z.union([
+    z.string(),
+    z.null(),
+    z.literal('')
+  ]).optional().transform(val => (val === '' || val === undefined) ? null : val),
+  displayOrder: z.number().int().min(0).optional(),
 })
 
 export type CategoryInput = z.infer<typeof categorySchema>
