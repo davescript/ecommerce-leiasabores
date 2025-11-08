@@ -65,7 +65,22 @@ export function Catalog() {
         page,
         limit,
       }),
+    staleTime: 60000, // 1 minute - allows cache but checks for updates
+    gcTime: 300000, // 5 minutes (formerly cacheTime in v4)
   })
+
+  // Listen for admin updates to force refetch
+  useEffect(() => {
+    const handleAdminUpdate = () => {
+      // Force refetch when admin updates a product
+      refetch()
+    }
+    
+    window.addEventListener('admin:product-updated', handleAdminUpdate)
+    return () => {
+      window.removeEventListener('admin:product-updated', handleAdminUpdate)
+    }
+  }, [refetch])
 
   useEffect(() => {
     setPage(1)

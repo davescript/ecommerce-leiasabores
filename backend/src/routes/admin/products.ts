@@ -591,6 +591,9 @@ productsRouter.post('/:id/variants', requirePermission('products:write'), async 
       where: eq(productVariants.id, variantId),
     })
 
+    // Bust cache for the product (variants affect product display)
+    await bustProductCache(c.env, productId)
+
     return c.json(variant, 201)
   } catch (error) {
     console.error('Create variant error:', error)
@@ -631,6 +634,9 @@ productsRouter.put('/variants/:id', requirePermission('products:write'), async (
       where: eq(productVariants.id, id),
     })
 
+    // Bust cache for the product (variants affect product display)
+    await bustProductCache(c.env, variant.productId)
+
     return c.json(updatedVariant)
   } catch (error) {
     console.error('Update variant error:', error)
@@ -656,6 +662,9 @@ productsRouter.delete('/variants/:id', requirePermission('products:write'), asyn
     }
 
     await db.delete(productVariants).where(eq(productVariants.id, id))
+
+    // Bust cache for the product (variants affect product display)
+    await bustProductCache(c.env, variant.productId)
 
     return c.json({ message: 'Variant deleted successfully' })
   } catch (error) {

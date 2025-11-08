@@ -67,14 +67,22 @@ router.get('/', async (c) => {
     const env = c.env as WorkerBindings
     const baseUrl = resolveImageBaseUrl(c.req.url, env)
 
-    // Cache curto para melhorar performance do catálogo
-    c.header('Cache-Control', 'public, max-age=60')
+    // Get cache version for cache busting
+    const { getCacheVersion } = await import('../utils/cache')
+    const cacheVersion = await getCacheVersion(env, 'products:list')
+    
+    // Cache com revalidação - permite cache mas força verificação quando necessário
+    c.header('Cache-Control', 'public, max-age=60, must-revalidate')
+    c.header('ETag', `"products-list-${cacheVersion}"`)
+    c.header('X-Cache-Version', cacheVersion)
+    
     return c.json({
       data: rows.map((row) => buildProductResponse(row, baseUrl, env)),
       page,
       limit,
       total,
       totalPages: total > 0 ? Math.ceil(total / limit) : 0,
+      _cacheVersion: cacheVersion, // Incluir versão na resposta para o frontend
     })
   } catch (error) {
     console.error('Failed to list products', error)
@@ -108,7 +116,21 @@ router.get('/:id', async (c) => {
 
     const env = c.env as WorkerBindings
     const baseUrl = resolveImageBaseUrl(c.req.url, env)
-    return c.json(buildProductResponse(product, baseUrl, env))
+    
+    // Get cache version for cache busting
+    const { getCacheVersion } = await import('../utils/cache')
+    const cacheVersion = await getCacheVersion(env, `product:${id}`)
+    
+    // Cache com revalidação
+    c.header('Cache-Control', 'public, max-age=60, must-revalidate')
+    c.header('ETag', `"product-${id}-${cacheVersion}"`)
+    c.header('X-Cache-Version', cacheVersion)
+    
+    const response = buildProductResponse(product, baseUrl, env)
+    return c.json({
+      ...response,
+      _cacheVersion: cacheVersion, // Incluir versão na resposta
+    })
   } catch (error) {
     console.error('Failed to retrieve product', error)
     c.header('Access-Control-Allow-Origin', '*')

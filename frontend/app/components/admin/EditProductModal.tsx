@@ -305,7 +305,24 @@ export function EditProductModal({ product, isOpen, onClose, onSave }: EditProdu
       if (formData.seoDescription !== undefined) updateData.seoDescription = formData.seoDescription || null
 
       await productsApi.update(product.id, updateData)
-      toast.success('Produto atualizado com sucesso')
+      
+      // Success feedback
+      toast.success('Produto atualizado com sucesso! As alterações já estão visíveis no site.')
+      
+      // Trigger cache invalidation on public site (if in same domain)
+      try {
+        // Notify public site to refresh cache (optional - for immediate updates)
+        if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+          // Dispatch event for cache refresh
+          window.dispatchEvent(new CustomEvent('admin:product-updated', { 
+            detail: { productId: product.id } 
+          }))
+        }
+      } catch (error) {
+        // Silent fail - cache will be invalidated by backend
+        console.debug('Cache refresh notification:', error)
+      }
+      
       onSave()
       onClose()
     } catch (error: any) {

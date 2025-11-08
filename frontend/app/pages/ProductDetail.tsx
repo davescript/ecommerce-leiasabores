@@ -26,7 +26,26 @@ export function ProductDetail() {
     queryKey: ['product', id],
     queryFn: () => fetchProduct(id!),
     enabled: Boolean(id),
+    staleTime: 60000, // 1 minute - allows cache but checks for updates
+    gcTime: 300000, // 5 minutes (formerly cacheTime in v4)
   })
+
+  // Listen for admin updates to force refetch
+  useEffect(() => {
+    const handleAdminUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ productId: string }>
+      const productId = customEvent.detail?.productId
+      if (productId === id) {
+        // Force refetch when admin updates this specific product
+        productQuery.refetch()
+      }
+    }
+    
+    window.addEventListener('admin:product-updated', handleAdminUpdate)
+    return () => {
+      window.removeEventListener('admin:product-updated', handleAdminUpdate)
+    }
+  }, [id, productQuery])
 
   const reviewsQuery = useQuery({
     queryKey: ['reviews', id],
