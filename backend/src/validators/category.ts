@@ -11,11 +11,10 @@ export const categorySchema = z.object({
 
 export const categoryUpdateSchema = categorySchema.partial().extend({
   id: z.string().min(1, 'ID da categoria é obrigatório'),
-}).extend({
   // Override to allow empty strings that will be converted to null
-  parentId: z.union([z.string(), z.null()]).optional(),
-  description: z.union([z.string(), z.null()]).optional(),
-  image: z.union([z.string().url(), z.null()]).optional(),
+  parentId: z.union([z.string(), z.null(), z.literal('')]).optional().transform(val => val === '' ? null : val),
+  description: z.union([z.string(), z.null(), z.literal('')]).optional().transform(val => val === '' ? null : val),
+  image: z.union([z.string().url(), z.null(), z.literal('')]).optional().transform(val => val === '' ? null : val),
 })
 
 export type CategoryInput = z.infer<typeof categorySchema>

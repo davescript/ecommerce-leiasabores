@@ -121,8 +121,16 @@ categoriesRouter.post('/', requirePermission('categories:write'), async (c) => {
     const adminUser = c.get('adminUser')!
     const db = getDb(c.env)
 
+    // Normalize data: convert empty strings to null for optional fields
+    const normalizedBody = {
+      ...rawBody,
+      description: rawBody.description && rawBody.description.trim() ? rawBody.description.trim() : null,
+      image: rawBody.image && rawBody.image.trim() ? rawBody.image.trim() : null,
+      parentId: rawBody.parentId && rawBody.parentId.trim() ? rawBody.parentId.trim() : null,
+    }
+
     // Validate input with Zod
-    const validationResult = categorySchema.safeParse(rawBody)
+    const validationResult = categorySchema.safeParse(normalizedBody)
 
     if (!validationResult.success) {
       return c.json({
@@ -216,9 +224,17 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       return c.json({ error: 'Category not found' }, 404)
     }
 
+    // Normalize data: convert empty strings to null for optional fields
+    const normalizedBody = {
+      ...rawBody,
+      description: rawBody.description !== undefined ? (rawBody.description && rawBody.description.trim() ? rawBody.description.trim() : null) : undefined,
+      image: rawBody.image !== undefined ? (rawBody.image && rawBody.image.trim() ? rawBody.image.trim() : null) : undefined,
+      parentId: rawBody.parentId !== undefined ? (rawBody.parentId && rawBody.parentId.trim() ? rawBody.parentId.trim() : null) : undefined,
+    }
+
     // Validate input with Zod (partial update allowed)
     const validationResult = categoryUpdateSchema.safeParse({
-      ...rawBody,
+      ...normalizedBody,
       id,
     })
 
