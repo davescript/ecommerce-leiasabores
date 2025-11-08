@@ -225,11 +225,20 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
     }
 
     // Normalize data: convert empty strings to null for optional fields
-    const normalizedBody = {
+    // Handle cases where fields might not be sent (undefined) vs sent as empty strings
+    const normalizedBody: any = {
       ...rawBody,
-      description: rawBody.description !== undefined ? (rawBody.description && rawBody.description.trim() ? rawBody.description.trim() : null) : undefined,
-      image: rawBody.image !== undefined ? (rawBody.image && rawBody.image.trim() ? rawBody.image.trim() : null) : undefined,
-      parentId: rawBody.parentId !== undefined ? (rawBody.parentId && rawBody.parentId.trim() ? rawBody.parentId.trim() : null) : undefined,
+    }
+    
+    // Only normalize fields that are actually present in the request
+    if (rawBody.description !== undefined) {
+      normalizedBody.description = rawBody.description && typeof rawBody.description === 'string' && rawBody.description.trim() ? rawBody.description.trim() : null
+    }
+    if (rawBody.image !== undefined) {
+      normalizedBody.image = rawBody.image && typeof rawBody.image === 'string' && rawBody.image.trim() ? rawBody.image.trim() : null
+    }
+    if (rawBody.parentId !== undefined) {
+      normalizedBody.parentId = rawBody.parentId && typeof rawBody.parentId === 'string' && rawBody.parentId.trim() ? rawBody.parentId.trim() : null
     }
 
     // Validate input with Zod (partial update allowed)
@@ -315,10 +324,15 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
     return c.json(updatedCategory)
   } catch (error: any) {
     console.error('Update category error:', error)
+    console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
+    
+    // Return more detailed error information for debugging
     return c.json({
       error: 'Internal server error',
       message: error.message || 'Unknown error',
+      // Include error details in development
+      ...(process.env.ENVIRONMENT === 'development' ? { stack: error.stack } : {}),
     }, 500)
   }
 })

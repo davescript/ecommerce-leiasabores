@@ -87,6 +87,18 @@ auth.post('/login', loginRateLimit, async (c) => {
       createdAt: new Date().toISOString(),
     })
 
+    // Generate access token (JWT) for API clients
+    const payload: AdminJWTPayload = {
+      adminUserId: adminUser.id,
+      email: adminUser.email,
+      role: adminUser.role,
+      permissions: adminUser.permissions || [],
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
+    }
+
+    const accessToken = await sign(payload, c.env.JWT_SECRET)
+
     // Update last login
     await db.update(adminUsers)
       .set({
@@ -112,7 +124,8 @@ auth.post('/login', loginRateLimit, async (c) => {
         role: adminUser.role,
         permissions: adminUser.permissions || [],
       },
-      // Include refresh token for API clients (cookie is set automatically)
+      // Include access token and refresh token for API clients (cookie is set automatically)
+      accessToken,
       refreshToken: refreshTokenValue,
     })
   } catch (error) {
