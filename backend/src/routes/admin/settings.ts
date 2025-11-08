@@ -65,7 +65,7 @@ settingsRouter.put('/', requirePermission('settings:write'), async (c) => {
     const adminUser = c.get('adminUser')!
     const db = getDb(c.env)
 
-    let settings = await db.query.storeSettings.findFirst({
+    const settings = await db.query.storeSettings.findFirst({
       where: eq(storeSettings.id, 'main'),
     })
 
