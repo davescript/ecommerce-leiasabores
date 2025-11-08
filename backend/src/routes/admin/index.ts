@@ -11,6 +11,7 @@ import categoriesRoutes from './categories'
 import couponsRoutes from './coupons'
 import settingsRoutes from './settings'
 import usersRoutes from './users'
+import seedRoutes from './seed'
 
 const admin = new Hono<{ Bindings: WorkerBindings; Variables: { adminUser?: AdminJWTPayload } }>()
 
@@ -25,6 +26,7 @@ admin.route('/categories', categoriesRoutes)
 admin.route('/coupons', couponsRoutes)
 admin.route('/settings', settingsRoutes)
 admin.route('/users', usersRoutes)
+admin.route('/seed', seedRoutes) // Seed routes (only in dev/test)
 
 export default admin
 

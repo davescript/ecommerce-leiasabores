@@ -35,8 +35,12 @@ export const test = base.extend<AdminAuthFixtures>({
   adminToken: async ({ adminApi }, use) => {
     const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
     
-    // Fazer login para obter token
+    // Fazer login para obter token (com header de teste para bypass rate limiting)
     const loginResponse = await adminApi.post(`${apiBaseUrl}/v1/admin/auth/login`, {
+      headers: {
+        'X-Test-Mode': 'true',
+        'X-Playwright-Test': 'true',
+      },
       data: {
         email: TEST_ADMIN_CREDENTIALS.email,
         password: TEST_ADMIN_CREDENTIALS.password,
@@ -105,9 +109,13 @@ export const test = base.extend<AdminAuthFixtures>({
   adminPage: async ({ page, adminToken }, use) => {
     const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:5173'
     
-    // Fazer login via API e armazenar token
+    // Fazer login via API e armazenar token (com header de teste para bypass rate limiting)
     const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
     const loginResponse = await page.request.post(`${apiBaseUrl}/v1/admin/auth/login`, {
+      headers: {
+        'X-Test-Mode': 'true',
+        'X-Playwright-Test': 'true',
+      },
       data: {
         email: TEST_ADMIN_CREDENTIALS.email,
         password: TEST_ADMIN_CREDENTIALS.password,

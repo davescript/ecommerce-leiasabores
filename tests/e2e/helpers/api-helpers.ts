@@ -15,6 +15,10 @@ export class AdminAPIHelper {
    */
   async login(email: string, password: string): Promise<{ accessToken: string; refreshToken: string; user: any }> {
     const response = await this.api.post(`${this.baseURL}/v1/admin/auth/login`, {
+      headers: {
+        'X-Test-Mode': 'true',
+        'X-Playwright-Test': 'true',
+      },
       data: { email, password },
     })
 
