@@ -44,19 +44,44 @@ export function CategoriesList() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      // Prepare data - convert empty strings to null for optional fields
+      const submitData = {
+        name: formData.name.trim(),
+        slug: formData.slug.trim(),
+        description: formData.description.trim() || null,
+        parentId: formData.parentId.trim() || null,
+        displayOrder: formData.displayOrder || 0,
+      }
+
       if (editingCategory) {
-        await categoriesApi.update(editingCategory.id, formData)
-        toast.success('Categoria atualizada com sucesso')
+        await categoriesApi.update(editingCategory.id, submitData)
+        toast.success('Categoria atualizada com sucesso! As alterações já estão visíveis no site.')
       } else {
-        await categoriesApi.create(formData)
-        toast.success('Categoria criada com sucesso')
+        await categoriesApi.create(submitData)
+        toast.success('Categoria criada com sucesso!')
       }
       setShowForm(false)
       setEditingCategory(null)
       setFormData({ name: '', slug: '', description: '', parentId: '', displayOrder: 0 })
       loadCategories()
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao salvar categoria')
+      const errorMessage = error.response?.data?.error || 'Erro ao salvar categoria'
+      const errorDetails = error.response?.data?.details
+      
+      // Show validation errors in a more user-friendly way
+      if (errorDetails && Array.isArray(errorDetails)) {
+        const errorMessages = errorDetails.map((err: any) => {
+          const field = err.path?.join('.') || 'campo'
+          return `${field}: ${err.message}`
+        }).join(', ')
+        toast.error(`Erro de validação: ${errorMessages}`)
+      } else {
+        toast.error(errorMessage)
+      }
+      
+      if (errorDetails) {
+        console.error('Validation errors:', errorDetails)
+      }
     }
   }
 

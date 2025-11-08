@@ -7,6 +7,7 @@ import { getDb } from '../../lib/db'
 import { categories } from '../../models/schema'
 import { bustCategoryCache } from '../../utils/cache'
 import { generateId } from '../../utils/id'
+import { categorySchema, categoryUpdateSchema } from '../../validators/category'
 
 const categoriesRouter = new Hono<{ Bindings: WorkerBindings; Variables: { adminUser?: AdminJWTPayload } }>()
 
@@ -116,15 +117,22 @@ categoriesRouter.get('/:id', requirePermission('categories:read'), async (c) => 
  */
 categoriesRouter.post('/', requirePermission('categories:write'), async (c) => {
   try {
-    const body = await c.req.json()
+    const rawBody = await c.req.json()
     const adminUser = c.get('adminUser')!
     const db = getDb(c.env)
 
-    const { name, slug, description, image, parentId, displayOrder } = body
+    // Validate input with Zod
+    const validationResult = categorySchema.safeParse(rawBody)
 
-    if (!name || !slug) {
-      return c.json({ error: 'Name and slug are required' }, 400)
+    if (!validationResult.success) {
+      return c.json({
+        error: 'Validation error',
+        details: validationResult.error.errors,
+      }, 400)
     }
+
+    const body = validationResult.data
+    const { name, slug, description, image, parentId, displayOrder } = body
 
     // Check if slug already exists
     const existing = await db.query.categories.findFirst({
@@ -133,6 +141,16 @@ categoriesRouter.post('/', requirePermission('categories:write'), async (c) => {
 
     if (existing) {
       return c.json({ error: 'Slug already exists' }, 400)
+    }
+
+    // Validate parentId if provided
+    if (parentId) {
+      const parentExists = await db.query.categories.findFirst({
+        where: eq(categories.id, parentId),
+      })
+      if (!parentExists) {
+        return c.json({ error: 'Parent category not found' }, 400)
+      }
     }
 
     const categoryId = generateId('cat')
@@ -181,9 +199,14 @@ categoriesRouter.post('/', requirePermission('categories:write'), async (c) => {
 categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) => {
   try {
     const id = c.req.param('id')
-    const body = await c.req.json()
+    const rawBody = await c.req.json()
     const adminUser = c.get('adminUser')!
     const db = getDb(c.env)
+
+    // Validate ID
+    if (!id || id.trim() === '') {
+      return c.json({ error: 'Category ID is required' }, 400)
+    }
 
     const category = await db.query.categories.findFirst({
       where: eq(categories.id, id),
@@ -193,10 +216,24 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       return c.json({ error: 'Category not found' }, 404)
     }
 
+    // Validate input with Zod (partial update allowed)
+    const validationResult = categoryUpdateSchema.safeParse({
+      ...rawBody,
+      id,
+    })
+
+    if (!validationResult.success) {
+      return c.json({
+        error: 'Validation error',
+        details: validationResult.error.errors,
+      }, 400)
+    }
+
+    const body = validationResult.data
     const { name, slug, description, image, parentId, displayOrder } = body
 
     // Check slug uniqueness if changed
-    if (slug && slug !== category.slug) {
+    if (slug !== undefined && slug !== category.slug) {
       const existing = await db.query.categories.findFirst({
         where: eq(categories.slug, slug),
       })
@@ -206,16 +243,37 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       }
     }
 
+    // Validate parentId if provided and changed
+    if (parentId !== undefined && parentId !== category.parentId) {
+      if (parentId) {
+        // Check if parent exists
+        const parentExists = await db.query.categories.findFirst({
+          where: eq(categories.id, parentId),
+        })
+        if (!parentExists) {
+          return c.json({ error: 'Parent category not found' }, 400)
+        }
+        // Prevent circular reference (category cannot be its own parent)
+        if (parentId === id) {
+          return c.json({ error: 'Category cannot be its own parent' }, 400)
+        }
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      updatedAt: new Date().toISOString(),
+    }
+
+    if (name !== undefined) updateData.name = name
+    if (slug !== undefined) updateData.slug = slug
+    if (description !== undefined) updateData.description = description || null
+    if (image !== undefined) updateData.image = image || null
+    if (parentId !== undefined) updateData.parentId = parentId || null
+    if (displayOrder !== undefined) updateData.displayOrder = displayOrder || 0
+
     await db.update(categories)
-      .set({
-        name: name !== undefined ? name : category.name,
-        slug: slug !== undefined ? slug : category.slug,
-        description: description !== undefined ? description : category.description,
-        image: image !== undefined ? image : category.image,
-        parentId: parentId !== undefined ? parentId : category.parentId,
-        displayOrder: displayOrder !== undefined ? displayOrder : category.displayOrder,
-        updatedAt: new Date().toISOString(),
-      })
+      .set(updateData)
       .where(eq(categories.id, id))
 
     // Bust cache
@@ -227,7 +285,10 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       action: 'update',
       resource: 'category',
       resourceId: id,
-      details: body,
+      details: {
+        name: body.name || category.name,
+        changes: Object.keys(body).filter(k => k !== 'id'),
+      },
       ...getRequestInfo(c as any),
     })
 
@@ -236,9 +297,13 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
     })
 
     return c.json(updatedCategory)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update category error:', error)
-    return c.json({ error: 'Internal server error' }, 500)
+    console.error('Error stack:', error.stack)
+    return c.json({
+      error: 'Internal server error',
+      message: error.message || 'Unknown error',
+    }, 500)
   }
 })
 
