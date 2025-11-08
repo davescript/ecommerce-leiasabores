@@ -87,13 +87,17 @@ export default defineConfig({
   ],
 
   // Servidor web para desenvolvimento
-  webServer: process.env.PLAYWRIGHT_TEST_BASE_URL?.startsWith('http://localhost') ? {
+  webServer: {
     command: 'npm run dev:frontend',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: 180 * 1000, // 3 minutos
     stdout: 'pipe',
     stderr: 'pipe',
-  } : undefined,
+    env: {
+      ...process.env,
+      FORCE_COLOR: '0',
+    },
+  },
 })
 
