@@ -249,17 +249,35 @@ export class AdminAPIHelper {
   /**
    * Upload de imagem para R2
    */
-  async uploadImage(file: Buffer, filename: string, productId?: string): Promise<any> {
-    const formData = new FormData()
-    const blob = new Blob([file], { type: 'image/jpeg' })
-    formData.append('file', blob, filename)
+  async uploadImage(file: Buffer | ArrayBuffer | Uint8Array, filename: string, productId?: string): Promise<any> {
+    const token = await this.getToken()
+    
+    // Converter Buffer para ArrayBuffer/Uint8Array se necessário
+    let fileData: Uint8Array
+    if (file instanceof Buffer) {
+      fileData = new Uint8Array(file)
+    } else if (file instanceof ArrayBuffer) {
+      fileData = new Uint8Array(file)
+    } else {
+      fileData = file
+    }
+
+    // Playwright usa multipart como objeto, não FormData
+    const multipartData: Record<string, string | { name: string; mimeType: string; buffer: Buffer }> = {
+      file: {
+        name: filename,
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from(fileData),
+      },
+    }
+    
     if (productId) {
-      formData.append('productId', productId)
+      multipartData.productId = productId
     }
 
     const response = await this.api.post(`${this.baseURL}/v1/admin/products/upload-image`, {
-      headers: { Authorization: `Bearer ${this.token}` },
-      multipart: formData as any,
+      headers: { Authorization: `Bearer ${token}` },
+      multipart: multipartData as any,
     })
 
     if (!response.ok()) {

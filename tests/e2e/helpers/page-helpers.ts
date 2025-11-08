@@ -66,10 +66,14 @@ export class AdminPageHelper {
   }
 
   /**
-   * Clicar em botão por texto
+   * Clicar em botão por texto ou regex
    */
-  async clickButton(text: string): Promise<void> {
-    await this.page.getByRole('button', { name: text, exact: false }).click()
+  async clickButton(text: string | RegExp): Promise<void> {
+    if (text instanceof RegExp) {
+      await this.page.getByRole('button', { name: text }).click()
+    } else {
+      await this.page.getByRole('button', { name: text, exact: false }).click()
+    }
   }
 
   /**
@@ -95,10 +99,14 @@ export class AdminPageHelper {
   /**
    * Aguardar toast de erro
    */
-  async waitForErrorToast(message?: string): Promise<void> {
+  async waitForErrorToast(message?: string | RegExp): Promise<void> {
     const toast = this.page.locator('[role="alert"], .toast-error, [data-sonner-toast]')
     if (message) {
-      await expect(toast.filter({ hasText: message })).toBeVisible({ timeout: 5000 })
+      if (message instanceof RegExp) {
+        await expect(toast.filter({ hasText: message })).toBeVisible({ timeout: 5000 })
+      } else {
+        await expect(toast.filter({ hasText: message })).toBeVisible({ timeout: 5000 })
+      }
     } else {
       await expect(toast).toBeVisible({ timeout: 5000 })
     }
