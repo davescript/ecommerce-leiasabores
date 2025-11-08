@@ -22,7 +22,7 @@ export async function authMiddleware(c: AuthContext, next: Next) {
   const token = authHeader.replace('Bearer ', '')
 
   try {
-    const payload = await verify(token, c.env.JWT_SECRET) as JWTPayload
+    const payload = await verify(token, c.env.JWT_SECRET) as unknown as JWTPayload
 
     c.set('user', payload)
 

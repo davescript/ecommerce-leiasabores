@@ -56,7 +56,7 @@ export async function adminAuthMiddleware(c: AdminAuthContext, next: Next) {
   const token = authHeader.replace('Bearer ', '')
 
   try {
-    const payload = await verify(token, c.env.JWT_SECRET) as AdminJWTPayload
+    const payload = await verify(token, c.env.JWT_SECRET) as unknown as AdminJWTPayload
 
     // Verify admin user still exists and is active
     const db = getDb(c.env)

@@ -1,4 +1,5 @@
 import { Context, Next } from 'hono'
+import { getCookie } from 'hono/cookie'
 
 /**
  * Generate random bytes for CSRF token
@@ -42,7 +43,7 @@ export function csrfProtection() {
 
     // Get CSRF token from header
     const token = c.req.header('X-CSRF-Token')
-    const cookieToken = c.req.cookie('csrf_token')
+    const cookieToken = getCookie(c, 'csrf_token')
 
     if (!token || !cookieToken || token !== cookieToken) {
       return c.json({ error: 'Invalid CSRF token' }, 403)

@@ -1,5 +1,6 @@
 import { Context, Next } from 'hono'
 import { sign, verify } from 'hono/jwt'
+import { getCookie } from 'hono/cookie'
 import { eq, and } from 'drizzle-orm'
 import type { WorkerBindings } from '../types/bindings'
 import { getDb } from '../lib/db'
@@ -71,7 +72,7 @@ export async function createSession(
     exp: Math.floor(expiresAt.getTime() / 1000),
   }
 
-  const token = await sign(payload, env.JWT_SECRET)
+  const token = await sign(payload as any, env.JWT_SECRET)
 
   return { token, expiresAt }
 }
@@ -81,7 +82,7 @@ export async function createSession(
  */
 export async function verifySession(c: SessionContext): Promise<SessionPayload | null> {
   // Try to get token from cookie first (preferred)
-  const cookieToken = c.req.cookie('admin_session')
+  const cookieToken = getCookie(c, 'admin_session')
   // Fallback to Authorization header
   const authHeader = c.req.header('Authorization')
   const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : null
@@ -93,7 +94,7 @@ export async function verifySession(c: SessionContext): Promise<SessionPayload |
   }
 
   try {
-    const payload = await verify(token, c.env.JWT_SECRET) as SessionPayload
+    const payload = await verify(token, c.env.JWT_SECRET) as unknown as SessionPayload
 
     // Verify session exists and is still valid
     const db = getDb(c.env)

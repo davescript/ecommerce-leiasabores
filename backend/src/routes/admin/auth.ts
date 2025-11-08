@@ -97,7 +97,7 @@ auth.post('/login', loginRateLimit, async (c) => {
       exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
     }
 
-    const accessToken = await sign(payload, c.env.JWT_SECRET)
+    const accessToken = await sign(payload as any, c.env.JWT_SECRET)
 
     // Update last login
     await db.update(adminUsers)
@@ -186,7 +186,7 @@ auth.post('/refresh', async (c) => {
       exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
     }
 
-    const accessToken = await sign(payload, c.env.JWT_SECRET)
+    const accessToken = await sign(payload as any, c.env.JWT_SECRET)
 
     return c.json({
       accessToken,

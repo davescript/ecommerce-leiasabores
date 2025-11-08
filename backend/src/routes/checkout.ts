@@ -635,7 +635,7 @@ router.post('/', async (c) => {
         message: env.ENVIRONMENT === 'development' ? errorMessage : undefined,
         type: errorType
       },
-      httpStatus,
+      { status: httpStatus as any }
     )
   } finally {
     // Cleanup if needed
