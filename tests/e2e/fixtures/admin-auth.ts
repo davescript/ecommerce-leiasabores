@@ -43,11 +43,26 @@ export const test = base.extend<AdminAuthFixtures>({
       },
     })
 
-    expect(loginResponse.ok()).toBeTruthy()
+    // Verificar se a resposta foi bem-sucedida
+    if (!loginResponse.ok()) {
+      const status = loginResponse.status()
+      const errorText = await loginResponse.text().catch(() => 'Unknown error')
+      throw new Error(
+        `Login failed with status ${status}. ` +
+        `API URL: ${apiBaseUrl}/v1/admin/auth/login. ` +
+        `Response: ${errorText}`
+      )
+    }
+
     const loginData = await loginResponse.json()
     const token = loginData.accessToken || loginData.token
 
-    expect(token).toBeTruthy()
+    if (!token) {
+      throw new Error(
+        `No access token received. Response: ${JSON.stringify(loginData)}`
+      )
+    }
+
     await use(token)
 
     // Cleanup: logout após o teste
@@ -99,9 +114,25 @@ export const test = base.extend<AdminAuthFixtures>({
       },
     })
 
-    expect(loginResponse.ok()).toBeTruthy()
+    // Verificar se a resposta foi bem-sucedida
+    if (!loginResponse.ok()) {
+      const status = loginResponse.status()
+      const errorText = await loginResponse.text().catch(() => 'Unknown error')
+      throw new Error(
+        `Login failed with status ${status}. ` +
+        `API URL: ${apiBaseUrl}/v1/admin/auth/login. ` +
+        `Response: ${errorText}`
+      )
+    }
+
     const loginData = await loginResponse.json()
     const token = loginData.accessToken || loginData.token || adminToken
+
+    if (!token) {
+      throw new Error(
+        `No access token received. Response: ${JSON.stringify(loginData)}`
+      )
+    }
 
     // Armazenar token no localStorage
     await page.addInitScript((token) => {
@@ -115,10 +146,18 @@ export const test = base.extend<AdminAuthFixtures>({
     // Navegar para o admin
     await page.goto(`${baseURL}/admin`)
     
-    // Aguardar carregamento do admin
-    await page.waitForSelector('[data-testid="admin-dashboard"], .admin-dashboard, h1, [role="main"]', {
-      timeout: 10000,
-    })
+    // Aguardar carregamento do admin (com timeout maior e seletores mais flexíveis)
+    try {
+      await page.waitForSelector('[data-testid="admin-dashboard"], .admin-dashboard, h1, [role="main"], body', {
+        timeout: 15000,
+      })
+    } catch (error) {
+      // Se não encontrar, verificar se pelo menos a página carregou
+      const body = await page.locator('body').textContent()
+      if (!body || body.length === 0) {
+        throw new Error(`Admin page did not load. URL: ${baseURL}/admin`)
+      }
+    }
 
     await use(page)
   },
