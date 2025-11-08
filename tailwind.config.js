@@ -1,6 +1,7 @@
 import tailwindcssAnimate from 'tailwindcss-animate'
 
 export default {
+  darkMode: 'class', // Enable class-based dark mode
   content: [
     './frontend/**/*.{js,jsx,ts,tsx}',
   ],

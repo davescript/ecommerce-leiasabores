@@ -12,11 +12,15 @@ const isValidProductId = (id: string): boolean => {
 }
 
 interface CartStore extends Cart {
+  couponCode: string | null
+  couponDiscount: number
   addItem: (product: Product, quantity: number) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
   calculateTotals: () => void
+  applyCoupon: (code: string) => Promise<boolean>
+  removeCoupon: () => void
 }
 
 export const useCartStore = create<CartStore>()(
@@ -27,6 +31,8 @@ export const useCartStore = create<CartStore>()(
       subtotal: 0,
       tax: 0,
       shipping: 0,
+      couponCode: null,
+      couponDiscount: 0,
 
       addItem: (product: Product, quantity: number) => {
         set((state) => {
@@ -73,7 +79,15 @@ export const useCartStore = create<CartStore>()(
       },
 
       clearCart: () => {
-        set({ items: [], total: 0, subtotal: 0, tax: 0, shipping: 0 })
+        set({ 
+          items: [], 
+          total: 0, 
+          subtotal: 0, 
+          tax: 0, 
+          shipping: 0,
+          couponCode: null,
+          couponDiscount: 0,
+        })
       },
 
       calculateTotals: () => {
@@ -86,11 +100,53 @@ export const useCartStore = create<CartStore>()(
         }, 0)
 
         const roundedSubtotal = roundCurrency(subtotal)
-        const tax = roundCurrency(roundedSubtotal * 0.23)
+        
+        // Apply coupon discount if exists
+        const subtotalAfterDiscount = Math.max(0, roundedSubtotal - state.couponDiscount)
+        
+        const tax = roundCurrency(subtotalAfterDiscount * 0.23)
         const shipping = roundedSubtotal === 0 ? 0 : roundedSubtotal >= 39 ? 0 : 5.99
-        const total = roundCurrency(roundedSubtotal + tax + shipping)
+        const total = roundCurrency(subtotalAfterDiscount + tax + shipping)
 
         set({ subtotal: roundedSubtotal, tax, shipping, total })
+      },
+
+      applyCoupon: async (code: string) => {
+        const state = get()
+        const subtotal = state.items.reduce((sum, item) => {
+          const price = item.product?.price || 0
+          return sum + (price * item.quantity)
+        }, 0)
+
+        try {
+          const { validateCoupon } = await import('@lib/coupons-api')
+          const validation = await validateCoupon(code, subtotal, state.items.map(item => ({
+            productId: item.productId,
+            category: item.product?.category,
+          })))
+
+          if (validation.valid && validation.coupon) {
+            set({
+              couponCode: code,
+              couponDiscount: validation.coupon.discount,
+            })
+            get().calculateTotals()
+            return true
+          } else {
+            return false
+          }
+        } catch (error) {
+          console.error('Error applying coupon:', error)
+          return false
+        }
+      },
+
+      removeCoupon: () => {
+        set({
+          couponCode: null,
+          couponDiscount: 0,
+        })
+        get().calculateTotals()
       },
     }),
     {

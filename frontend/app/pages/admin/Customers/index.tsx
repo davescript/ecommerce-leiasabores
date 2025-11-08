@@ -1,119 +1,148 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Search, User } from 'lucide-react'
-import { api } from '@lib/api-client'
-import { Input } from '@components/ui/input'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { Search, Eye, Users } from 'lucide-react'
+import { customersApi } from '@lib/admin-api'
+import { toast } from 'sonner'
+
+interface Customer {
+  id: string
+  name: string
+  email: string
+  createdAt: string
+}
 
 export function CustomersList() {
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [search, setSearch] = useState('')
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-customers'],
-    queryFn: async () => {
-      const response = await api.get('/admin/customers')
-      return response.data
-    },
-  })
+  useEffect(() => {
+    loadCustomers()
+  }, [page, search])
 
-  interface Customer {
-    id?: string
-    email?: string
-    name?: string
-    orderCount?: number
-    totalSpent?: number
+  const loadCustomers = async () => {
+    try {
+      setLoading(true)
+      const response = await customersApi.list({
+        page,
+        limit: 20,
+        search: search || undefined,
+      })
+      setCustomers(response.data.customers)
+      setTotalPages(response.data.pagination.totalPages)
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erro ao carregar clientes')
+    } finally {
+      setLoading(false)
+    }
   }
-
-  const customers = (data?.data || []) as Customer[]
-  const filteredCustomers = customers.filter((customer: Customer) => {
-    if (!search) return true
-    const searchLower = search.toLowerCase()
-    return (
-      customer.email?.toLowerCase().includes(searchLower) ||
-      customer.name?.toLowerCase().includes(searchLower)
-    )
-  })
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Clientes</h2>
-        <p className="text-gray-600 mt-1">Gerencie seus clientes</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Clientes</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Gerencie seus clientes
+        </p>
       </div>
 
-      {/* Busca */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            type="text"
-            placeholder="Buscar clientes..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+        <input
+          type="text"
+          placeholder="Buscar clientes..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(1)
+          }}
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white"
+        />
+      </div>
+
+      {/* Customers Table */}
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-      </div>
-
-      {/* Tabela */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pedidos
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Gasto
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading ? (
+      ) : customers.length === 0 ? (
+        <div className="text-center py-12">
+          <Users className="mx-auto text-gray-400" size={48} />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Nenhum cliente encontrado</p>
+        </div>
+      ) : (
+        <>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                    Carregando...
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Nome
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Data de Cadastro
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Ações
+                  </th>
                 </tr>
-              ) : filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                    Nenhum cliente encontrado
-                  </td>
-                </tr>
-              ) : (
-                filteredCustomers.map((customer: Customer) => (
-                  <tr key={customer.id || customer.email} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <User className="w-5 h-5 text-gray-400" />
-                        <div className="text-sm font-medium text-gray-900">
-                          {customer.name || 'N/A'}
-                        </div>
-                      </div>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {customers.map((customer) => (
+                  <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      {customer.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {customer.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer.orderCount || 0}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(customer.createdAt).toLocaleDateString('pt-PT')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      €{customer.totalSpent?.toFixed(2) || '0.00'}
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link
+                        to={`/admin/customers/${customer.id}`}
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400"
+                      >
+                        <Eye size={18} />
+                      </Link>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Página {page} de {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg disabled:opacity-50"
+              >
+                Próxima
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

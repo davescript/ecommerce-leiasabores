@@ -3,8 +3,6 @@ import { Suspense, lazy, useEffect } from 'react'
 import { Header } from '@components/Header'
 import { Footer } from '@components/Footer'
 import { AnnouncementBar } from '@components/AnnouncementBar'
-import { ProtectedRoute } from '@components/ProtectedRoute'
-import { logger } from '@lib/logger'
 import './styles/globals.css'
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })))
@@ -21,39 +19,18 @@ const FAQ = lazy(() => import('./pages/FAQ').then((m) => ({ default: m.FAQ })))
 const Envios = lazy(() => import('./pages/Envios').then((m) => ({ default: m.Envios })))
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })))
 
-// Admin - Preload mais agressivo
-const AdminLayout = lazy(() => 
-  import('./components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout }))
-)
-const AdminDashboard = lazy(() => 
-  import('./pages/admin/Dashboard').then((m) => ({ default: m.Dashboard }))
-)
-const AdminProducts = lazy(() => 
-  import('./pages/admin/Products/index').then((m) => ({ default: m.ProductsList }))
-)
-const AdminOrders = lazy(() => 
-  import('./pages/admin/Orders/index').then((m) => ({ default: m.OrdersList }))
-)
-const AdminCategories = lazy(() => 
-  import('./pages/admin/Categories/index').then((m) => ({ default: m.CategoriesList }))
-)
-const AdminCoupons = lazy(() => 
-  import('./pages/admin/Coupons/index').then((m) => ({ default: m.CouponsList }))
-)
-const AdminCustomers = lazy(() => 
-  import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList }))
-)
-const AdminSettings = lazy(() => 
-  import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings }))
-)
-
-// Preload admin components quando detectar rota admin
-if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
-  // Preload componentes admin imediatamente
-  import('./components/admin/AdminLayout')
-  import('./pages/admin/Products/index')
-  import('./components/admin/QuickProductsList')
-}
+// Admin
+const AdminLogin = lazy(() => import('./pages/admin/Login').then((m) => ({ default: m.AdminLogin })))
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard').then((m) => ({ default: m.AdminDashboard })))
+const ProductsList = lazy(() => import('./pages/admin/Products/index').then((m) => ({ default: m.ProductsList })))
+const OrdersList = lazy(() => import('./pages/admin/Orders/index').then((m) => ({ default: m.OrdersList })))
+const CustomersList = lazy(() => import('./pages/admin/Customers/index').then((m) => ({ default: m.CustomersList })))
+const CategoriesList = lazy(() => import('./pages/admin/Categories/index').then((m) => ({ default: m.CategoriesList })))
+const CouponsList = lazy(() => import('./pages/admin/Coupons/index').then((m) => ({ default: m.CouponsList })))
+const AdminUsersList = lazy(() => import('./pages/admin/Users/index').then((m) => ({ default: m.AdminUsersList })))
+const Settings = lazy(() => import('./pages/admin/Settings/index').then((m) => ({ default: m.Settings })))
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })))
+const ProtectedAdminRoute = lazy(() => import('./components/admin/ProtectedAdminRoute').then((m) => ({ default: m.ProtectedAdminRoute })))
 
 function LayoutWrapper({ children, showHeaderFooter }: { children: React.ReactNode; showHeaderFooter: boolean }) {
   if (showHeaderFooter) {
@@ -71,44 +48,7 @@ function LayoutWrapper({ children, showHeaderFooter }: { children: React.ReactNo
 
 export function App() {
   useEffect(() => {
-    // Forçar limpeza de cache ao carregar (apenas em /admin)
-    if (window.location.pathname.startsWith('/admin')) {
-      // Desregistrar service workers antigos
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          registrations.forEach(registration => {
-            // Se o cache name não for v2.0, desregistrar
-            registration.unregister().catch(() => {})
-          })
-        })
-        
-        // Limpar caches antigos
-        caches.keys().then(cacheNames => {
-          cacheNames.forEach(cacheName => {
-            if (!cacheName.includes('v2.0')) {
-              caches.delete(cacheName).catch(() => {})
-            }
-          })
-        })
-      }
-    }
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js', { updateViaCache: 'none' })
-        .then((registration) => {
-          logger.debug('Service Worker registered successfully')
-          // Forçar atualização do service worker
-          registration.update()
-          // Notificar service worker para pular espera
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' })
-          }
-        })
-        .catch((err) => {
-          logger.debug('Service Worker registration failed (non-critical):', err)
-        })
-    }
+    // Service Worker desabilitado
   }, [])
 
   return (
@@ -222,77 +162,25 @@ export function App() {
             }
           />
 
-          {/* Rotas Admin */}
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route
             path="/admin"
             element={
-              <ProtectedRoute requireAuth={false}>
-                <AdminLayout>
-                  <AdminDashboard />
-                </AdminLayout>
-              </ProtectedRoute>
+              <ProtectedAdminRoute>
+                <AdminLayout />
+              </ProtectedAdminRoute>
             }
-          />
-          <Route
-            path="/admin/products"
-            element={
-              <ProtectedRoute requireAuth={true}>
-                <AdminLayout>
-                  <AdminProducts />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/orders"
-            element={
-              <ProtectedRoute requireAuth={true}>
-                <AdminLayout>
-                  <AdminOrders />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/categories"
-            element={
-              <ProtectedRoute requireAuth={true}>
-                <AdminLayout>
-                  <AdminCategories />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/coupons"
-            element={
-              <ProtectedRoute requireAuth={true}>
-                <AdminLayout>
-                  <AdminCoupons />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/customers"
-            element={
-              <ProtectedRoute requireAuth={true}>
-                <AdminLayout>
-                  <AdminCustomers />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/settings"
-            element={
-              <ProtectedRoute requireAuth={true}>
-                <AdminLayout>
-                  <AdminSettings />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="products" element={<ProductsList />} />
+            <Route path="orders" element={<OrdersList />} />
+            <Route path="customers" element={<CustomersList />} />
+            <Route path="categories" element={<CategoriesList />} />
+            <Route path="coupons" element={<CouponsList />} />
+            <Route path="users" element={<AdminUsersList />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
 
           {/* 404 */}
           <Route

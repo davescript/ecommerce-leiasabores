@@ -15,6 +15,7 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, '../utils'),
       '@styles': path.resolve(__dirname, './app/styles'),
       '@config': path.resolve(__dirname, '../config'),
+      '@store': path.resolve(__dirname, './app/store'),
     }
   },
   build: {

@@ -1,0 +1,42 @@
+import { z } from 'zod'
+
+export const productVariantSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Nome da variante é obrigatório'),
+  value: z.string().min(1, 'Valor da variante é obrigatório'),
+  priceModifier: z.number().default(0),
+  stock: z.number().nullable().optional(),
+  sku: z.string().nullable().optional(),
+})
+
+export const productSchema = z.object({
+  name: z.string().min(1, 'Nome do produto é obrigatório').max(200, 'Nome muito longo'),
+  description: z.string().nullable().optional(),
+  shortDescription: z.string().max(500, 'Descrição curta muito longa').nullable().optional(),
+  price: z.number().min(0.01, 'Preço deve ser maior que zero').max(99999.99, 'Preço muito alto'),
+  originalPrice: z.number().nullable().optional(),
+  category: z.string().min(1, 'Categoria é obrigatória'),
+  images: z.array(z.string().url('URL de imagem inválida')).default([]),
+  inStock: z.boolean().default(true),
+  stock: z.number().int().min(0).nullable().optional(),
+  tags: z.array(z.string()).default([]),
+  variants: z.array(productVariantSchema).default([]),
+  status: z.enum(['active', 'inactive', 'draft']).default('active'),
+  slug: z.string().optional(),
+})
+
+export const productUpdateSchema = productSchema.partial().extend({
+  id: z.string().min(1, 'ID do produto é obrigatório'),
+  categories: z.array(z.string()).optional(), // Array of category IDs for many-to-many relationship
+  slug: z.string().min(1).optional(),
+  sku: z.string().optional().nullable(),
+  status: z.enum(['active', 'inactive', 'draft']).optional(),
+  seoTitle: z.string().optional().nullable(),
+  seoDescription: z.string().optional().nullable(),
+  stockMinAlert: z.number().int().min(0).optional(),
+})
+
+export type ProductInput = z.infer<typeof productSchema>
+export type ProductUpdateInput = z.infer<typeof productUpdateSchema>
+export type ProductVariantInput = z.infer<typeof productVariantSchema>
+

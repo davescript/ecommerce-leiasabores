@@ -1,3 +1,2 @@
-/admin /index.html 200
-/admin/* /index.html 200
+# All routes - SPA routing
 /* /index.html 200

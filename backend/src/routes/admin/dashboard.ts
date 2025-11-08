@@ -1,174 +1,230 @@
 import { Hono } from 'hono'
-import { getDb, dbSchema } from '../../lib/db'
-import { eq, sql, desc, and, gte } from 'drizzle-orm'
+import { sql, eq, and, gte, desc } from 'drizzle-orm'
 import type { WorkerBindings } from '../../types/bindings'
-import { authMiddleware, adminMiddleware, JWTPayload } from '../../middleware/auth'
+import { AdminJWTPayload } from '../../middleware/adminAuth'
+import { adminAuthMiddleware } from '../../middleware/adminAuth'
+import { getDb } from '../../lib/db'
+import { orders, products, users, orderItems } from '../../models/schema'
 
-const dashboard = new Hono<{ Bindings: WorkerBindings; Variables: { user?: JWTPayload } }>()
+const dashboard = new Hono<{ Bindings: WorkerBindings; Variables: { adminUser?: AdminJWTPayload } }>()
 
-dashboard.get('/', authMiddleware, adminMiddleware, async (c) => {
-  const db = getDb(c.env as WorkerBindings)
-  const { products, orders } = dbSchema
+// All routes require authentication
+dashboard.use('*', adminAuthMiddleware)
 
+/**
+ * GET /api/v1/admin/dashboard/stats
+ * Get dashboard statistics
+ */
+dashboard.get('/stats', async (c) => {
   try {
+    const db = getDb(c.env)
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    // Vendas hoje
-    const salesTodayResult = await db
+    // Sales today (paid, shipped, or delivered orders)
+    const salesToday = await db
       .select({
-        total: sql<number>`COALESCE(SUM(${orders.total}), 0)`,
+        total: sql<number>`SUM(${orders.total})`,
         count: sql<number>`COUNT(*)`,
       })
       .from(orders)
       .where(
         and(
-          eq(orders.status, 'paid'),
+          sql`${orders.status} IN ('paid', 'shipped', 'delivered')`,
           gte(sql`datetime(${orders.createdAt})`, todayStart.toISOString())
         )
       )
       .get()
 
-    // Vendas esta semana
-    const salesWeekResult = await db
+    // Sales this week
+    const salesWeek = await db
       .select({
-        total: sql<number>`COALESCE(SUM(${orders.total}), 0)`,
-      })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.status, 'paid'),
-          gte(sql`datetime(${orders.createdAt})`, weekStart.toISOString())
-        )
-      )
-      .get()
-
-    // Vendas este mês
-    const salesMonthResult = await db
-      .select({
-        total: sql<number>`COALESCE(SUM(${orders.total}), 0)`,
-      })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.status, 'paid'),
-          gte(sql`datetime(${orders.createdAt})`, monthStart.toISOString())
-        )
-      )
-      .get()
-
-    // Ticket médio (últimos 30 dias)
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    const avgTicketResult = await db
-      .select({
-        avg: sql<number>`COALESCE(AVG(${orders.total}), 0)`,
+        total: sql<number>`SUM(${orders.total})`,
         count: sql<number>`COUNT(*)`,
       })
       .from(orders)
       .where(
         and(
-          eq(orders.status, 'paid'),
-          gte(sql`datetime(${orders.createdAt})`, thirtyDaysAgo.toISOString())
+          sql`${orders.status} IN ('paid', 'shipped', 'delivered')`,
+          gte(sql`datetime(${orders.createdAt})`, weekStart.toISOString())
         )
       )
       .get()
 
-    // Produtos em estoque baixo (< 5)
-    // Nota: Se o campo stock não existir, retornar 0
-    let lowStockCount = 0
-    try {
-      const lowStockProducts = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(products)
-        .where(
-          and(
-            eq(products.inStock, true),
-            sql`COALESCE(${products.stock}, 999) < 5`
-          )
+    // Sales this month
+    const salesMonth = await db
+      .select({
+        total: sql<number>`SUM(${orders.total})`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(orders)
+      .where(
+        and(
+          sql`${orders.status} IN ('paid', 'shipped', 'delivered')`,
+          gte(sql`datetime(${orders.createdAt})`, monthStart.toISOString())
         )
-        .get()
-      lowStockCount = lowStockProducts?.count || 0
-    } catch {
-      // Campo stock pode não existir ainda, retornar 0
-      lowStockCount = 0
-    }
+      )
+      .get()
 
-    // Pedidos recentes (últimos 10)
+    // Total customers
+    const totalCustomers = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(users)
+      .get()
+
+    // Total products
+    const totalProducts = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(products)
+      .get()
+
+    // Products in stock
+    const productsInStock = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(products)
+      .where(eq(products.inStock, true))
+      .get()
+
+    // Products out of stock
+    const productsOutOfStock = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(products)
+      .where(eq(products.inStock, false))
+      .get()
+
+    // Pending orders
+    const pendingOrders = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(orders)
+      .where(eq(orders.status, 'pending'))
+      .get()
+
+    // Average order value (paid, shipped, or delivered orders)
+    const avgOrderValue = await db
+      .select({
+        avg: sql<number>`AVG(${orders.total})`,
+      })
+      .from(orders)
+      .where(sql`${orders.status} IN ('paid', 'shipped', 'delivered')`)
+      .get()
+
+    return c.json({
+      sales: {
+        today: {
+          total: salesToday?.total || 0,
+          count: salesToday?.count || 0,
+        },
+        week: {
+          total: salesWeek?.total || 0,
+          count: salesWeek?.count || 0,
+        },
+        month: {
+          total: salesMonth?.total || 0,
+          count: salesMonth?.count || 0,
+        },
+      },
+      customers: {
+        total: totalCustomers?.count || 0,
+      },
+      products: {
+        total: totalProducts?.count || 0,
+        inStock: productsInStock?.count || 0,
+        outOfStock: productsOutOfStock?.count || 0,
+      },
+      orders: {
+        pending: pendingOrders?.count || 0,
+      },
+      averageOrderValue: avgOrderValue?.avg || 0,
+    })
+  } catch (error) {
+    console.error('Dashboard stats error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
+/**
+ * GET /api/v1/admin/dashboard/recent-orders
+ * Get recent orders
+ */
+dashboard.get('/recent-orders', async (c) => {
+  try {
+    const limit = parseInt(c.req.query('limit') || '10')
+    const db = getDb(c.env)
+
     const recentOrders = await db
       .select()
       .from(orders)
       .orderBy(desc(orders.createdAt))
-      .limit(10)
-      .all()
+      .limit(limit)
 
-    // Top produtos (por vendas - simplificado)
+    return c.json({ orders: recentOrders })
+  } catch (error) {
+    console.error('Recent orders error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
+/**
+ * GET /api/v1/admin/dashboard/top-products
+ * Get top selling products
+ */
+dashboard.get('/top-products', async (c) => {
+  try {
+    const limit = parseInt(c.req.query('limit') || '10')
+    const db = getDb(c.env)
+
     const topProducts = await db
       .select({
-        id: products.id,
-        name: products.name,
-        sales: sql<number>`0`, // TODO: Implementar contagem real de vendas
-        revenue: sql<number>`0`, // TODO: Implementar receita real
+        productId: orderItems.productId,
+        productName: orderItems.productName,
+        totalSold: sql<number>`SUM(${orderItems.quantity})`,
+        totalRevenue: sql<number>`SUM(${orderItems.subtotal})`,
       })
-      .from(products)
-      .limit(5)
-      .all()
+      .from(orderItems)
+      .groupBy(orderItems.productId, orderItems.productName)
+      .orderBy(desc(sql`SUM(${orderItems.quantity})`))
+      .limit(limit)
 
-    // Carrinhos abandonados (simplificado - pedidos não pagos nas últimas 24h)
-    const abandonedCartsResult = await db
-      .select({ count: sql<number>`COUNT(*)` })
+    return c.json({ products: topProducts })
+  } catch (error) {
+    console.error('Top products error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
+/**
+ * GET /api/v1/admin/dashboard/sales-chart
+ * Get sales data for charts
+ */
+dashboard.get('/sales-chart', async (c) => {
+  try {
+    const days = parseInt(c.req.query('days') || '30')
+    const db = getDb(c.env)
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+
+    // Group sales by day for the chart
+    const sales = await db
+      .select({
+        date: sql<string>`date(${orders.createdAt})`,
+        total: sql<number>`SUM(${orders.total})`,
+        count: sql<number>`COUNT(*)`,
+      })
       .from(orders)
       .where(
         and(
-          eq(orders.status, 'pending'),
-          gte(sql`datetime(${orders.createdAt})`, new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString())
+          sql`${orders.status} IN ('paid', 'shipped', 'delivered')`,
+          gte(sql`datetime(${orders.createdAt})`, startDate.toISOString())
         )
       )
-      .get()
+      .groupBy(sql`date(${orders.createdAt})`)
+      .orderBy(sql`date(${orders.createdAt})`)
 
-    const salesToday = salesTodayResult?.total || 0
-    const ordersToday = salesTodayResult?.count || 0
-    const salesThisWeek = salesWeekResult?.total || 0
-    const salesThisMonth = salesMonthResult?.total || 0
-    const averageTicket = avgTicketResult?.avg || 0
-    const abandonedCarts = abandonedCartsResult?.count || 0
-
-    // Taxa de conversão (simplificado - seria necessário dados de visitantes)
-    const conversionRate = ordersToday > 0 ? (ordersToday / 100) * 100 : 0
-
-    return c.json({
-      salesToday,
-      salesThisWeek,
-      salesThisMonth,
-      averageTicket: Math.round(averageTicket * 100) / 100,
-      ordersToday,
-      conversionRate: Math.round(conversionRate * 10) / 10,
-      abandonedCarts,
-      lowStockProducts: lowStockCount,
-      recentOrders: recentOrders.map((order) => ({
-        id: order.id,
-        customer: (order as { customerName?: string }).customerName || order.email || 'Cliente',
-        total: order.total,
-        status: order.status || 'pending',
-        date: order.createdAt,
-      })),
-      topProducts: topProducts.map((product) => ({
-        id: product.id,
-        name: product.name,
-        sales: 0, // TODO: Implementar
-        revenue: 0, // TODO: Implementar
-      })),
-    })
+    return c.json({ sales })
   } catch (error) {
-    console.error('Dashboard error:', error)
-    return c.json(
-      {
-        error: 'Failed to fetch dashboard data',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      500
-    )
+    console.error('Sales chart error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
   }
 })
 

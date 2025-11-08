@@ -23,7 +23,8 @@
       "@types/*": ["frontend/types/*"],
       "@utils/*": ["frontend/utils/*"],
       "@styles/*": ["frontend/app/styles/*"],
-      "@config/*": ["config/*"]
+      "@config/*": ["config/*"],
+      "@store/*": ["frontend/app/store/*"]
     },
     "outDir": "frontend/dist",
     "rootDir": "."

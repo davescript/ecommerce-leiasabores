@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle } from 'lucide-react'
 import { Button } from '@components/Button'
+import { CouponInput } from '@components/CouponInput'
 import { useCartStore } from '@hooks/useCart'
 import type { CartItem } from '@types'
 import { useSEO } from '@hooks/useSEO'
@@ -30,6 +31,8 @@ export function Cart() {
   const tax = useCartStore((state) => state.tax)
   const shipping = useCartStore((state) => state.shipping)
   const total = useCartStore((state) => state.total)
+  const couponCode = useCartStore((state) => state.couponCode)
+  const couponDiscount = useCartStore((state) => state.couponDiscount)
 
   useSEO({
     title: 'Carrinho · Leia Sabores',
@@ -181,6 +184,12 @@ export function Cart() {
                   <span>Subtotal</span>
                   <span className="font-semibold text-secondary">{formatPrice(subtotal)}</span>
                 </div>
+                {couponCode && couponDiscount > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span>Cupom ({couponCode})</span>
+                    <span className="font-semibold">-{formatPrice(couponDiscount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>IVA (23%)</span>
                   <span className="font-semibold text-secondary">{formatPrice(tax)}</span>
@@ -191,6 +200,10 @@ export function Cart() {
                     {shipping === 0 ? 'Grátis' : formatPrice(shipping)}
                   </span>
                 </div>
+              </div>
+              
+              <div className="mt-4 sm:mt-6">
+                <CouponInput />
               </div>
 
               <div className="mt-4 sm:mt-6 flex items-center justify-between">

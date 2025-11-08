@@ -23,6 +23,7 @@
     // Versão simplificada - sem loops de reload
     console.log('[App] Carregando aplicação...')
   </script>
+  <script type="module" src="/main.tsx"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -35,7 +36,6 @@
     // Agora o React Router carrega o admin completo automaticamente
     console.log('[App] Carregando aplicação React...')
   </script>
-  <script type="module" src="/main.tsx"></script>
   <script>
     // Forçar atualização do Service Worker
     if ('serviceWorker' in navigator) {

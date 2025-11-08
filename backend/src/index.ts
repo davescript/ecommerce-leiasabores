@@ -7,11 +7,12 @@ import cartRoutes from './routes/cart'
 import checkoutRoutes from './routes/checkout'
 import paymentIntentRoutes from './routes/payment-intent'
 import uploadsRoutes from './routes/uploads'
-import adminRoutes from './routes/admin'
 import r2Routes from './routes/r2'
 import r2AutoSyncRoutes from './routes/r2-auto-sync'
 import seedPartylandRoutes from './routes/seed-partyland'
 import categoriesRoutes from './routes/categories'
+import couponsRoutes from './routes/coupons'
+import adminRoutes from './routes/admin'
 import { errorHandler } from './middleware/errorHandler'
 import { getDb, dbSchema, type DrizzleSchema } from './lib/db'
 import { eq } from 'drizzle-orm'
@@ -96,6 +97,25 @@ app.get('/debug/config', (c) => {
 })
 
 // Seed endpoints BEFORE admin router (so they don't get caught by app.route('/api/admin'))
+
+// Seed Admin User (proteção por token via ADMIN_SEED_TOKEN)
+app.post('/api/admin/seed-admin', async (c) => {
+  const token = c.req.query('token')
+  const expected = c.env.ADMIN_SEED_TOKEN
+  if (!expected || token !== expected) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  try {
+    const { seedAdmin } = await import('./seeds/admin-seed')
+    await seedAdmin(c.env as WorkerBindings)
+    return c.json({ ok: true, message: 'Admin user seeded successfully' })
+  } catch (error) {
+    console.error('Seed admin error:', error)
+    return c.json({ error: 'Failed to seed admin', message: error instanceof Error ? error.message : 'Unknown error' }, 500)
+  }
+})
+
 // Seed de Categorias (proteção por token via ADMIN_SEED_TOKEN)
 app.post('/api/admin/seed-categories', async (c) => {
   const token = c.req.query('token')
@@ -424,11 +444,20 @@ app.route('/api/cart', cartRoutes)
 app.route('/api/checkout', checkoutRoutes)
 app.route('/api/payment-intent', paymentIntentRoutes)
 app.route('/api/uploads', uploadsRoutes)
-app.route('/api/admin', adminRoutes)
 app.route('/api/r2', r2Routes)
 app.route('/api/r2-auto-sync', r2AutoSyncRoutes)
 app.route('/api/admin', seedPartylandRoutes)
 app.route('/api/categories', categoriesRoutes)
+app.route('/api/coupons', couponsRoutes)
+
+// CSRF token endpoint (public, but protected by origin)
+app.get('/api/csrf-token', async (c) => {
+  const { getCSRFToken } = await import('./middleware/csrf')
+  return getCSRFToken(c)
+})
+
+// Admin Panel API (v1)
+app.route('/api/v1/admin', adminRoutes)
 
 // Health endpoint sob o prefixo /api para funcionar com rotas de produção
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))

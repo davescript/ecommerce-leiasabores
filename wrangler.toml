@@ -17,6 +17,7 @@ routes = [
 binding = "DB"
 database_name = "ecommerce_db"
 database_id = "881f400b-6acd-4f0d-abe9-b9e6fe085349"
+migrations_dir = "backend/migrations"
 
 # -----------------------------
 # ✅ R2 Storage
