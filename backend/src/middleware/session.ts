@@ -114,7 +114,7 @@ export async function verifySession(c: SessionContext): Promise<SessionPayload |
     }
 
     // Check inactivity timeout
-    const lastActivity = new Date(session.lastActivityAt)
+    const lastActivity = session.lastActivityAt ? new Date(session.lastActivityAt) : new Date()
     const now = new Date()
     const inactivityDuration = (now.getTime() - lastActivity.getTime()) / 1000
 

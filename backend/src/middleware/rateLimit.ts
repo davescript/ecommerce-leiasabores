@@ -43,8 +43,9 @@ export function rateLimit(options: RateLimitOptions) {
           })
           .where(eq(rateLimits.key, key))
       } else {
+        const currentCount = rateLimitEntry.count || 0
         // Check if limit exceeded
-        if (rateLimitEntry.count >= options.max) {
+        if (currentCount >= options.max) {
           c.header('X-RateLimit-Limit', options.max.toString())
           c.header('X-RateLimit-Remaining', '0')
           c.header('X-RateLimit-Reset', Math.floor(resetAt.getTime() / 1000).toString())
@@ -53,11 +54,11 @@ export function rateLimit(options: RateLimitOptions) {
 
         // Increment counter
         await db.update(rateLimits)
-          .set({ count: rateLimitEntry.count + 1 })
+          .set({ count: currentCount + 1 })
           .where(eq(rateLimits.key, key))
 
         c.header('X-RateLimit-Limit', options.max.toString())
-        c.header('X-RateLimit-Remaining', (options.max - rateLimitEntry.count - 1).toString())
+        c.header('X-RateLimit-Remaining', (options.max - currentCount - 1).toString())
         c.header('X-RateLimit-Reset', Math.floor(resetAt.getTime() / 1000).toString())
       }
     } else {

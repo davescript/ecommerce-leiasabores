@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { eq, and, like, desc, asc, sql } from 'drizzle-orm'
 import type { WorkerBindings } from '../../types/bindings'
 import { AdminJWTPayload } from '../../middleware/adminAuth'
-import { adminAuthMiddleware, createAuditLog, getRequestInfo, requirePermission, requireRole } from '../../middleware/adminAuth'
+import { adminAuthMiddleware, createAuditLog, getRequestInfo, requireRole } from '../../middleware/adminAuth'
 import { getDb } from '../../lib/db'
 import { adminUsers } from '../../models/schema'
 import { hashPassword } from '../../utils/bcrypt'
@@ -270,7 +270,7 @@ usersRouter.put('/:id', requireRole('admin'), async (c) => {
       action: 'update',
       resource: 'admin_user',
       resourceId: id,
-      details: Object.keys(body),
+      details: { fields: Object.keys(body) },
       ...getRequestInfo(c as any),
     })
 

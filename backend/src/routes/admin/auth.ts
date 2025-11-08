@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { sign } from 'hono/jwt'
 import { eq, and } from 'drizzle-orm'
 import type { WorkerBindings } from '../../types/bindings'
 import { getDb } from '../../lib/db'
@@ -68,8 +69,8 @@ auth.post('/login', loginRateLimit, async (c) => {
       userAgent
     )
 
-    // Set httpOnly cookie
-    setSessionCookie(c, token, expiresAt)
+    // Set httpOnly cookie (need to cast to SessionContext)
+    setSessionCookie(c as any, token, expiresAt)
 
     // Also generate refresh token for mobile/API clients
     const refreshTokenValue = crypto.getRandomValues(new Uint8Array(32))
@@ -221,8 +222,8 @@ auth.post('/logout', adminAuthMiddleware, async (c) => {
       await db.delete(refreshTokens).where(eq(refreshTokens.token, refreshToken))
     }
 
-    // Clear session cookie
-    clearSessionCookie(c)
+    // Clear session cookie (need to cast to SessionContext)
+    clearSessionCookie(c as any)
 
     return c.json({ message: 'Logged out successfully' })
   } catch (error) {

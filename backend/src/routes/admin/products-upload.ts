@@ -38,7 +38,7 @@ uploadRouter.post('/upload-image', requirePermission('products:write'), async (c
 
     // Upload to R2
     const uploadResult = await uploadToR2({
-      bucket: c.env.R2,
+      bucket: c.env.R2 as any,
       file,
       key,
       contentType: file.type,
@@ -129,7 +129,7 @@ uploadRouter.delete('/delete-image', requirePermission('products:write'), async 
     }
 
     // Delete from R2
-    await deleteFromR2(c.env.R2, imageKey)
+    await deleteFromR2(c.env.R2 as any, imageKey)
 
     // Delete from database if ID was provided
     if (id) {

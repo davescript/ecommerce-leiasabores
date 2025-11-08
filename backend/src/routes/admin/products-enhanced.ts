@@ -11,16 +11,16 @@ const productsRouter = new Hono<{ Bindings: WorkerBindings; Variables: { adminUs
 productsRouter.use('*', adminAuthMiddleware)
 
 /**
- * Helper: Generate slug from name
+ * Helper: Generate slug from name (commented out - not used yet)
  */
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-}
+// function generateSlug(name: string): string {
+//   return name
+//     .toLowerCase()
+//     .normalize('NFD')
+//     .replace(/[\u0300-\u036f]/g, '')
+//     .replace(/[^a-z0-9]+/g, '-')
+//     .replace(/(^-|-$)/g, '')
+// }
 
 /**
  * GET /api/v1/admin/products
@@ -33,7 +33,7 @@ productsRouter.get('/', requirePermission('products:read'), async (c) => {
     const search = c.req.query('search') || ''
     const category = c.req.query('category') || ''
     const inStock = c.req.query('inStock')
-    const status = c.req.query('status') // 'active', 'inactive', 'draft'
+    // const status = c.req.query('status') // 'active', 'inactive', 'draft' - Not used yet
     const sortBy = c.req.query('sortBy') || 'createdAt'
     const sortOrder = c.req.query('sortOrder') || 'desc'
 
@@ -170,10 +170,10 @@ productsRouter.post('/', requirePermission('products:write'), async (c) => {
       stock,
       tags,
       variants,
-      seoTitle,
-      seoDescription,
-      slug,
-      status = 'active',
+      // seoTitle, // Not used yet
+      // seoDescription, // Not used yet
+      // slug, // Not used yet
+      // status = 'active', // Not used yet
     } = body
 
     if (!name || !price || !category) {
@@ -181,7 +181,7 @@ productsRouter.post('/', requirePermission('products:write'), async (c) => {
     }
 
     // Generate slug if not provided
-    const productSlug = slug || generateSlug(name)
+    // const productSlug = slug || generateSlug(name) // Not used yet
 
     // Verify category exists
     const categoryExists = await db.query.categories.findFirst({
@@ -327,7 +327,7 @@ productsRouter.put('/:id', requirePermission('products:write'), async (c) => {
       action: 'update',
       resource: 'product',
       resourceId: id,
-      details: Object.keys(body),
+      details: { fields: Object.keys(body) },
       ...getRequestInfo(c as any),
     })
 

@@ -21,7 +21,13 @@ function randomBytes(length: number): Uint8Array {
  * CSRF token generation and validation
  */
 export function generateCSRFToken(): string {
-  return randomBytes(32).toString('base64url')
+  const bytes = randomBytes(32)
+  // Convert Uint8Array to base64url string
+  const base64 = btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '')
+  return base64
 }
 
 /**

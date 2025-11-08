@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { eq, and, gte, lte, sql } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { getDb } from '../lib/db'
 import { coupons } from '../models/schema'
 import type { WorkerBindings } from '../types/bindings'
