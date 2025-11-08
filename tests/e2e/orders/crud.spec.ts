@@ -3,7 +3,7 @@ import { AdminAPIHelper } from '../helpers/api-helpers'
 import { AdminPageHelper } from '../helpers/page-helpers'
 
 test.describe('Pedidos', () => {
-  test('deve listar pedidos', async ({ adminPage, adminApi, adminToken }) => {
+  test('deve listar pedidos', async ({ adminPage, adminApi }) => {
     const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
     await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
@@ -16,7 +16,7 @@ test.describe('Pedidos', () => {
     expect(orders.orders).toBeDefined()
   })
 
-  test('deve atualizar status do pedido', async ({ adminPage, adminApi, adminToken }) => {
+  test('deve atualizar status do pedido', async ({ adminPage, adminApi }) => {
     const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
     await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const orders = await apiHelper.listOrders()

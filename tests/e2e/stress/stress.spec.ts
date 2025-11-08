@@ -4,7 +4,7 @@ import { AdminPageHelper } from '../helpers/page-helpers'
 import { TEST_PRODUCT, generateTestProductName } from '../helpers/test-data'
 
 test.describe('Stress Tests', () => {
-  test('deve prevenir double-click em salvar', async ({ adminPage, adminApi, adminToken }) => {
+  test('deve prevenir double-click em salvar', async ({ adminPage, adminApi }) => {
     const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
     await apiHelper.login('admin@leiasabores.pt', 'admin123')
     const pageHelper = new AdminPageHelper(adminPage)
@@ -44,7 +44,7 @@ test.describe('Stress Tests', () => {
     await apiHelper.deleteProduct(product.id)
   })
 
-  test('deve lidar com múltiplas abas abertas', async ({ adminPage, adminApi, adminToken }) => {
+  test('deve lidar com múltiplas abas abertas', async ({ adminPage, adminApi }) => {
     const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
 
     // Criar produto
@@ -86,7 +86,7 @@ test.describe('Stress Tests', () => {
     await apiHelper.deleteProduct(product.id)
   })
 
-  test('deve lidar com paginação robusta', async ({ adminApi, adminToken }) => {
+  test('deve lidar com paginação robusta', async ({ adminApi }) => {
     const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
 
     // Testar diferentes páginas

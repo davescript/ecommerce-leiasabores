@@ -20,7 +20,7 @@ test.describe('API Routes', () => {
     }
   })
 
-  test('deve retornar 404 para rotas inexistentes', async ({ adminApi, adminToken }) => {
+  test('deve retornar 404 para rotas inexistentes', async ({ adminApi }) => {
     const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
     
     const response = await adminApi.get(`${apiBaseUrl}/v1/admin/nonexistent`, {
@@ -30,7 +30,7 @@ test.describe('API Routes', () => {
     expect(response.status()).toBe(404)
   })
 
-  test('deve validar schemas Zod', async ({ adminApi, adminToken }) => {
+  test('deve validar schemas Zod', async ({ adminApi }) => {
     const apiHelper = new AdminAPIHelper(adminApi, process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api')
 
     // Tentar criar produto com dados inválidos
