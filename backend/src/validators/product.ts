@@ -28,12 +28,23 @@ export const productSchema = z.object({
 export const productUpdateSchema = productSchema.partial().extend({
   id: z.string().min(1, 'ID do produto é obrigatório'),
   categories: z.array(z.string()).optional(), // Array of category IDs for many-to-many relationship
-  slug: z.string().min(1).optional(),
+  slug: z.string().optional().nullable(),
   sku: z.string().optional().nullable(),
   status: z.enum(['active', 'inactive', 'draft']).optional(),
   seoTitle: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
   stockMinAlert: z.number().int().min(0).optional(),
+  // Override price to allow 0 in updates (partial updates)
+  price: z.number().min(0, 'Preço não pode ser negativo').max(99999.99, 'Preço muito alto').optional(),
+  // Override images to allow both string URLs and objects
+  images: z.union([
+    z.array(z.string()),
+    z.array(z.object({
+      id: z.string().optional(),
+      url: z.string(),
+      r2Key: z.string().optional(),
+    })),
+  ]).optional(),
 })
 
 export type ProductInput = z.infer<typeof productSchema>

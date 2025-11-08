@@ -351,10 +351,17 @@ productsRouter.put('/:id', requirePermission('products:write'), async (c) => {
     }
 
     if (body.name !== undefined) updateData.name = body.name
-    if (body.description !== undefined) updateData.description = body.description
-    if (body.shortDescription !== undefined) updateData.shortDescription = body.shortDescription
-    if (body.price !== undefined) updateData.price = body.price
-    if (body.originalPrice !== undefined) updateData.originalPrice = body.originalPrice
+    if (body.description !== undefined) updateData.description = body.description || null
+    if (body.shortDescription !== undefined) updateData.shortDescription = body.shortDescription || null
+    if (body.price !== undefined) {
+      const priceValue = parseFloat(body.price.toString())
+      if (priceValue > 0) {
+        updateData.price = priceValue
+      } else {
+        return c.json({ error: 'Preço deve ser maior que zero' }, 400)
+      }
+    }
+    if (body.originalPrice !== undefined) updateData.originalPrice = body.originalPrice ? parseFloat(body.originalPrice.toString()) : null
     if (body.category !== undefined) updateData.category = categorySlug
     if (body.slug !== undefined) updateData.slug = body.slug
     if (body.sku !== undefined) updateData.sku = body.sku
@@ -362,7 +369,15 @@ productsRouter.put('/:id', requirePermission('products:write'), async (c) => {
     if (body.seoTitle !== undefined) updateData.seoTitle = body.seoTitle
     if (body.seoDescription !== undefined) updateData.seoDescription = body.seoDescription
     if (body.stockMinAlert !== undefined) updateData.stockMinAlert = body.stockMinAlert
-    if (body.images !== undefined) updateData.images = body.images
+    if (body.images !== undefined) {
+      // Handle images: convert objects to URLs, keep strings as-is
+      const imageUrls = body.images.map((img: any) => {
+        if (typeof img === 'string') return img
+        if (typeof img === 'object' && img.url) return img.url
+        return img
+      }).filter(Boolean)
+      updateData.images = imageUrls
+    }
     if (body.inStock !== undefined) updateData.inStock = body.inStock
     if (body.stock !== undefined) updateData.stock = body.stock
     if (body.tags !== undefined) updateData.tags = body.tags

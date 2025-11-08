@@ -252,14 +252,79 @@ export function EditProductModal({ product, isOpen, onClose, onSave }: EditProdu
 
     setLoading(true)
     try {
-      await productsApi.update(product.id, formData)
+      // Prepare data for API - convert images to URLs only and filter out empty values
+      // Only send fields that have meaningful values
+      const updateData: any = {}
+      
+      // Always include price if it's been set (even if 0, but validate it)
+      if (formData.price !== undefined && formData.price !== null) {
+        if (formData.price <= 0) {
+          toast.error('O preço deve ser maior que zero')
+          setLoading(false)
+          return
+        }
+        updateData.price = formData.price
+      }
+      
+      // Add other fields only if they have values
+      if (formData.name) updateData.name = formData.name
+      if (formData.description !== undefined) updateData.description = formData.description || null
+      if (formData.shortDescription !== undefined) updateData.shortDescription = formData.shortDescription || null
+      if (formData.originalPrice !== undefined && formData.originalPrice !== null) {
+        updateData.originalPrice = formData.originalPrice
+      } else if (formData.originalPrice === null) {
+        updateData.originalPrice = null
+      }
+      if (formData.category) updateData.category = formData.category
+      if (formData.categories && formData.categories.length > 0) updateData.categories = formData.categories
+      
+      // Convert images to URL strings only
+      if (formData.images && formData.images.length > 0) {
+        updateData.images = formData.images.map(img => {
+          if (typeof img === 'string') return img
+          if (typeof img === 'object' && img.url) return img.url
+          return img
+        }).filter(Boolean)
+      } else if (formData.images && formData.images.length === 0) {
+        updateData.images = []
+      }
+      
+      if (formData.inStock !== undefined) updateData.inStock = formData.inStock
+      if (formData.stock !== undefined && formData.stock !== null) {
+        updateData.stock = formData.stock
+      } else if (formData.stock === null) {
+        updateData.stock = null
+      }
+      if (formData.stockMinAlert !== undefined) updateData.stockMinAlert = formData.stockMinAlert
+      if (formData.tags) updateData.tags = formData.tags
+      if (formData.variants) updateData.variants = formData.variants
+      if (formData.status) updateData.status = formData.status
+      if (formData.slug) updateData.slug = formData.slug
+      if (formData.sku !== undefined) updateData.sku = formData.sku || null
+      if (formData.seoTitle !== undefined) updateData.seoTitle = formData.seoTitle || null
+      if (formData.seoDescription !== undefined) updateData.seoDescription = formData.seoDescription || null
+
+      await productsApi.update(product.id, updateData)
       toast.success('Produto atualizado com sucesso')
       onSave()
       onClose()
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao atualizar produto')
-      if (error.response?.data?.details) {
-        console.error('Validation errors:', error.response.data.details)
+      const errorMessage = error.response?.data?.error || 'Erro ao atualizar produto'
+      const errorDetails = error.response?.data?.details
+      
+      // Show validation errors in a more user-friendly way
+      if (errorDetails && Array.isArray(errorDetails)) {
+        const errorMessages = errorDetails.map((err: any) => {
+          const field = err.path?.join('.') || 'campo'
+          return `${field}: ${err.message}`
+        }).join(', ')
+        toast.error(`Erro de validação: ${errorMessages}`)
+      } else {
+        toast.error(errorMessage)
+      }
+      
+      if (errorDetails) {
+        console.error('Validation errors:', errorDetails)
       }
     } finally {
       setLoading(false)
