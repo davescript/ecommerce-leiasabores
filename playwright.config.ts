@@ -86,12 +86,14 @@ export default defineConfig({
     },
   ],
 
-  // Servidor web para desenvolvimento (opcional)
-  // webServer: {
-  //   command: 'npm run dev:frontend',
-  //   url: 'http://localhost:5173',
-  //   reuseExistingServer: !process.env.CI,
-  //   timeout: 120 * 1000,
-  // },
+  // Servidor web para desenvolvimento
+  webServer: process.env.PLAYWRIGHT_TEST_BASE_URL?.startsWith('http://localhost') ? {
+    command: 'npm run dev:frontend',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  } : undefined,
 })
 

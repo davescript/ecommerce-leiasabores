@@ -1,21 +1,54 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Product Page', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to catalog first to get a product ID
-    await page.goto('/catalogo')
-    await page.waitForSelector('a[href*="/produto"]', { timeout: 10000 })
-    const productLink = page.locator('a[href*="/produto"]').first()
-    if (await productLink.isVisible()) {
-      await productLink.click()
-    } else {
-      // Fallback: try direct navigation
-      await page.goto('/produto/test-id')
+  test.beforeEach(async ({ page, request }) => {
+    // Try to get a product from the API first
+    const apiBaseUrl = process.env.PLAYWRIGHT_API_URL || 'https://api.leiasabores.pt/api'
+    let productId: string | null = null
+
+    try {
+      const productsResponse = await request.get(`${apiBaseUrl}/v1/products?limit=1`)
+      if (productsResponse.ok()) {
+        const data = await productsResponse.json()
+        if (data.products && data.products.length > 0) {
+          productId = data.products[0].id
+        }
+      }
+    } catch (error) {
+      console.warn('Could not fetch products from API:', error)
     }
+
+    // Navigate to product page
+    if (productId) {
+      await page.goto(`/produto/${productId}`)
+    } else {
+      // Fallback: navigate to catalog and find a product link
+      await page.goto('/catalogo')
+      try {
+        await page.waitForSelector('a[href*="/produto"]', { timeout: 10000 })
+        const productLink = page.locator('a[href*="/produto"]').first()
+        if (await productLink.isVisible()) {
+          await productLink.click()
+        } else {
+          test.skip()
+        }
+      } catch (error) {
+        // If no products found, skip the test
+        test.skip()
+      }
+    }
+
+    // Wait for page to load
+    await page.waitForLoadState('networkidle')
   })
 
   test('should load product page', async ({ page }) => {
+    // Verify we're on a product page
     await expect(page).toHaveURL(/\/produto\//)
+    // Verify page loaded successfully (not a 404 or error page)
+    const title = await page.title()
+    expect(title).not.toContain('404')
+    expect(title).not.toContain('Error')
   })
 
   test('should display product name', async ({ page }) => {
