@@ -96,7 +96,7 @@ test.describe('Cart Page', () => {
 
   test('should calculate total correctly', async ({ page }) => {
     // Procurar por total (mais flexível)
-    const total = page.locator('text=/total|€|EUR|R\$|preço total/i').filter({ hasText: /[0-9.,]/ }).first()
+    const total = page.locator('text=/total|€|EUR|R$|preço total/i').filter({ hasText: /[0-9.,]/ }).first()
     
     if (await total.isVisible({ timeout: 5000 }).catch(() => false)) {
       await expect(total).toBeVisible()
