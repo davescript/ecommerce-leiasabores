@@ -227,5 +227,76 @@ customersRouter.get('/:id/notes', requirePermission('customers:read'), async (c)
   }
 })
 
+/**
+ * PUT /api/v1/admin/customers/:id
+ * Update customer
+ */
+customersRouter.put('/:id', requirePermission('customers:write'), async (c) => {
+  try {
+    const id = c.req.param('id')
+    const body = await c.req.json()
+    const adminUser = c.get('adminUser')!
+    const db = getDb(c.env)
+
+    const customer = await db.query.users.findFirst({
+      where: eq(users.id, id),
+    })
+
+    if (!customer) {
+      return c.json({ error: 'Customer not found' }, 404)
+    }
+
+    const { name, email, phone, address } = body
+
+    // Validate email if provided
+    if (email && email !== customer.email) {
+      // Check if email already exists
+      const existingCustomer = await db.query.users.findFirst({
+        where: eq(users.email, email),
+      })
+
+      if (existingCustomer && existingCustomer.id !== id) {
+        return c.json({ error: 'Email already exists' }, 400)
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      updatedAt: new Date().toISOString(),
+    }
+
+    if (name !== undefined) updateData.name = name
+    if (email !== undefined) updateData.email = email
+    if (phone !== undefined) updateData.phone = phone
+    if (address !== undefined) updateData.address = address
+
+    await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+
+    // Audit log
+    await createAuditLog(c.env, {
+      adminUserId: adminUser.adminUserId,
+      action: 'update',
+      resource: 'customer',
+      resourceId: id,
+      details: {
+        name: name || customer.name,
+        changes: Object.keys(body),
+      },
+      ...getRequestInfo(c as any),
+    })
+
+    const updatedCustomer = await db.query.users.findFirst({
+      where: eq(users.id, id),
+    })
+
+    return c.json(updatedCustomer)
+  } catch (error) {
+    console.error('Update customer error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
 export default customersRouter
 

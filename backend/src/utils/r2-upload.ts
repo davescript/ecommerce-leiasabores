@@ -90,6 +90,20 @@ export async function uploadToR2(options: R2UploadOptions): Promise<{
   const fileData = file instanceof File ? await file.arrayBuffer() : file
   const contentLength = fileData.byteLength
 
+  // Validate file size (max 10MB)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+  if (contentLength > MAX_FILE_SIZE) {
+    throw new Error(`File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB`)
+  }
+
+  // Validate content type for images
+  if (contentType && contentType.startsWith('image/')) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']
+    if (!allowedTypes.includes(contentType)) {
+      throw new Error(`Invalid image type: ${contentType}. Allowed types: ${allowedTypes.join(', ')}`)
+    }
+  }
+
   await bucket.put(key, fileData, {
     httpMetadata: {
       contentType: contentType || 'application/octet-stream',

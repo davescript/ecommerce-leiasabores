@@ -7,6 +7,7 @@ import { getDb } from '../../lib/db'
 import { coupons } from '../../models/schema'
 import { bustCouponCache } from '../../utils/cache'
 import { generateId } from '../../utils/id'
+import { couponSchema, couponUpdateSchema } from '../../validators/coupon'
 
 const couponsRouter = new Hono<{ Bindings: WorkerBindings; Variables: { adminUser?: AdminJWTPayload } }>()
 
@@ -100,6 +101,17 @@ couponsRouter.post('/', requirePermission('coupons:write'), async (c) => {
     const adminUser = c.get('adminUser')!
     const db = getDb(c.env)
 
+    // Validate input with Zod
+    const validationResult = couponSchema.safeParse(body)
+
+    if (!validationResult.success) {
+      return c.json({
+        error: 'Validation error',
+        details: validationResult.error.errors,
+      }, 400)
+    }
+
+    const validatedData = validationResult.data
     const {
       code,
       type,
@@ -108,17 +120,10 @@ couponsRouter.post('/', requirePermission('coupons:write'), async (c) => {
       maxDiscount,
       usageLimit,
       expiresAt,
+      startsAt,
       active,
       applicableCategories,
-    } = body
-
-    if (!code || !type || !value) {
-      return c.json({ error: 'Code, type, and value are required' }, 400)
-    }
-
-    if (type !== 'percentage' && type !== 'fixed') {
-      return c.json({ error: 'Type must be "percentage" or "fixed"' }, 400)
-    }
+    } = validatedData
 
     // Check if code already exists
     const existing = await db.query.coupons.findFirst({
@@ -136,11 +141,12 @@ couponsRouter.post('/', requirePermission('coupons:write'), async (c) => {
       id: couponId,
       code: code.toUpperCase(),
       type,
-      value: parseFloat(value),
-      minPurchase: minPurchase ? parseFloat(minPurchase) : null,
-      maxDiscount: maxDiscount ? parseFloat(maxDiscount) : null,
-      usageLimit: usageLimit ? parseInt(usageLimit) : null,
-      maxUses: usageLimit ? parseInt(usageLimit) : null, // Alias for consistency
+      value: value,
+      minPurchase: minPurchase || null,
+      maxDiscount: maxDiscount || null,
+      usageLimit: usageLimit || null,
+      maxUses: usageLimit || null, // Alias for consistency
+      startsAt: startsAt || null,
       endsAt: expiresAt || null,
       active: active !== false,
       applicableCategories: applicableCategories || null,
@@ -193,6 +199,20 @@ couponsRouter.put('/:id', requirePermission('coupons:write'), async (c) => {
       return c.json({ error: 'Coupon not found' }, 404)
     }
 
+    // Validate input with Zod (partial update allowed)
+    const validationResult = couponUpdateSchema.safeParse({
+      ...body,
+      id,
+    })
+
+    if (!validationResult.success) {
+      return c.json({
+        error: 'Validation error',
+        details: validationResult.error.errors,
+      }, 400)
+    }
+
+    const validatedData = validationResult.data
     const {
       code,
       type,
@@ -201,9 +221,10 @@ couponsRouter.put('/:id', requirePermission('coupons:write'), async (c) => {
       maxDiscount,
       usageLimit,
       expiresAt,
+      startsAt,
       active,
       applicableCategories,
-    } = body
+    } = validatedData
 
     // Check code uniqueness if changed
     if (code && code.toUpperCase() !== coupon.code) {
@@ -220,13 +241,16 @@ couponsRouter.put('/:id', requirePermission('coupons:write'), async (c) => {
       .set({
         code: code !== undefined ? code.toUpperCase() : coupon.code,
         type: type !== undefined ? type : coupon.type,
-        value: value !== undefined ? parseFloat(value) : coupon.value,
-        minPurchase: minPurchase !== undefined ? (minPurchase ? parseFloat(minPurchase) : null) : coupon.minPurchase,
-        maxDiscount: maxDiscount !== undefined ? (maxDiscount ? parseFloat(maxDiscount) : null) : coupon.maxDiscount,
-        usageLimit: usageLimit !== undefined ? (usageLimit ? parseInt(usageLimit) : null) : coupon.usageLimit,
+        value: value !== undefined ? value : coupon.value,
+        minPurchase: minPurchase !== undefined ? minPurchase : coupon.minPurchase,
+        maxDiscount: maxDiscount !== undefined ? maxDiscount : coupon.maxDiscount,
+        usageLimit: usageLimit !== undefined ? usageLimit : coupon.usageLimit,
+        maxUses: usageLimit !== undefined ? usageLimit : coupon.maxUses,
+        startsAt: startsAt !== undefined ? startsAt : coupon.startsAt,
         endsAt: expiresAt !== undefined ? expiresAt : coupon.endsAt,
         active: active !== undefined ? active : coupon.active,
         applicableCategories: applicableCategories !== undefined ? applicableCategories : coupon.applicableCategories,
+        categoryScope: applicableCategories !== undefined ? applicableCategories : coupon.categoryScope,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(coupons.id, id))

@@ -395,7 +395,7 @@ productsRouter.put('/:id', requirePermission('products:write'), async (c) => {
       // Insert new variants
       if (body.variants.length > 0) {
         const now = new Date().toISOString()
-        const variantsToInsert = body.variants.map(variant => {
+        const variantsToInsert = body.variants.map((variant: any) => {
           const variantId = variant.id || generateId('var')
           return {
             id: variantId,
@@ -522,8 +522,31 @@ productsRouter.delete('/:id', requirePermission('products:delete'), async (c) =>
     // Delete product categories
     await db.delete(productCategories).where(eq(productCategories.productId, id))
 
-    // Delete product images (R2 cleanup would be done separately if needed)
+    // Get product images before deleting from database
+    const productImagesList = await db.query.productImages.findMany({
+      where: eq(productImages.productId, id),
+    })
+
+    // Delete product images from database
     await db.delete(productImages).where(eq(productImages.productId, id))
+
+    // Delete images from R2 (non-fatal - continue even if R2 deletion fails)
+    if (productImagesList.length > 0) {
+      try {
+        const { deleteFromR2 } = await import('../../utils/r2-upload')
+        await Promise.all(
+          productImagesList.map(image => 
+            deleteFromR2(c.env.R2 as any, image.r2Key).catch((err: any) => {
+              console.error(`Failed to delete R2 image ${image.r2Key}:`, err)
+              // Continue even if individual image deletion fails
+            })
+          )
+        )
+      } catch (error: any) {
+        console.error('Error deleting product images from R2:', error)
+        // Continue with product deletion even if R2 cleanup fails
+      }
+    }
 
     // Delete product
     await db.delete(products).where(eq(products.id, id))

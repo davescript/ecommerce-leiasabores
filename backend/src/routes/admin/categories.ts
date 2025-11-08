@@ -4,7 +4,7 @@ import type { WorkerBindings } from '../../types/bindings'
 import { AdminJWTPayload } from '../../middleware/adminAuth'
 import { adminAuthMiddleware, createAuditLog, getRequestInfo, requirePermission } from '../../middleware/adminAuth'
 import { getDb } from '../../lib/db'
-import { categories } from '../../models/schema'
+import { categories, products, productCategories } from '../../models/schema'
 import { bustCategoryCache } from '../../utils/cache'
 import { generateId } from '../../utils/id'
 import { categorySchema, categoryUpdateSchema } from '../../validators/category'
@@ -224,10 +224,6 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       return c.json({ error: 'Category not found' }, 404)
     }
 
-    // Log raw body for debugging
-    console.log('Raw body received:', JSON.stringify(rawBody))
-    console.log('Category ID:', id)
-
     // Normalize data: convert empty strings to null for optional fields
     // Handle cases where fields might not be sent (undefined) vs sent as empty strings
     const normalizedBody: any = {
@@ -253,8 +249,6 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       normalizedBody.slug = rawBody.slug.trim()
     }
 
-    console.log('Normalized body:', JSON.stringify(normalizedBody))
-
     // Validate input with Zod (partial update allowed)
     // For updates, we should allow partial data and only validate what's provided
     const validationData = {
@@ -262,12 +256,13 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
       ...normalizedBody,
     }
 
-    console.log('Validation data:', JSON.stringify(validationData))
-
     const validationResult = categoryUpdateSchema.safeParse(validationData)
 
     if (!validationResult.success) {
-      console.error('Validation failed:', validationResult.error.errors)
+      // Only log validation errors in development
+      if (c.env.ENVIRONMENT === 'development') {
+        console.error('Validation failed:', validationResult.error.errors)
+      }
       return c.json({
         error: 'Validation error',
         details: validationResult.error.errors,
@@ -278,12 +273,12 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
     const { name, slug, description, image, parentId, displayOrder } = body
 
     // Check slug uniqueness if changed
-    if (slug !== undefined && slug !== category.slug) {
+    if (slug !== undefined && slug !== null && slug !== category.slug) {
       const existing = await db.query.categories.findFirst({
         where: eq(categories.slug, slug),
       })
 
-      if (existing) {
+      if (existing && existing.id !== id) {
         return c.json({ error: 'Slug already exists' }, 400)
       }
     }
@@ -317,28 +312,19 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
     if (parentId !== undefined) updateData.parentId = parentId === '' ? null : parentId
     if (displayOrder !== undefined && displayOrder !== null) updateData.displayOrder = displayOrder
 
-    console.log('Update data:', JSON.stringify(updateData))
-
     // Perform the update
-    try {
-      await db.update(categories)
-        .set(updateData)
-        .where(eq(categories.id, id))
-      console.log('Category updated successfully')
-    } catch (updateError: any) {
-      console.error('Database update error:', updateError)
-      console.error('Update error message:', updateError.message)
-      console.error('Update error stack:', updateError.stack)
-      throw updateError
-    }
+    await db.update(categories)
+      .set(updateData)
+      .where(eq(categories.id, id))
 
     // Bust cache (don't fail if this fails)
     try {
       await bustCategoryCache(c.env)
-      console.log('Cache busted successfully')
     } catch (cacheError: any) {
-      console.error('Cache bust error (non-fatal):', cacheError)
-      // Continue even if cache busting fails
+      // Only log in development
+      if (c.env.ENVIRONMENT === 'development') {
+        console.error('Cache bust error (non-fatal):', cacheError)
+      }
     }
 
     // Audit log (don't fail if this fails)
@@ -354,10 +340,11 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
         },
         ...getRequestInfo(c as any),
       })
-      console.log('Audit log created successfully')
     } catch (auditError: any) {
-      console.error('Audit log error (non-fatal):', auditError)
-      // Continue even if audit log fails
+      // Only log in development
+      if (c.env.ENVIRONMENT === 'development') {
+        console.error('Audit log error (non-fatal):', auditError)
+      }
     }
 
     // Fetch updated category
@@ -366,11 +353,9 @@ categoriesRouter.put('/:id', requirePermission('categories:write'), async (c) =>
     })
 
     if (!updatedCategory) {
-      console.error('Category not found after update - this should not happen')
       return c.json({ error: 'Category not found after update' }, 404)
     }
 
-    console.log('Category update completed successfully')
     return c.json(updatedCategory)
   } catch (error: any) {
     console.error('Update category error:', error)
@@ -412,6 +397,30 @@ categoriesRouter.delete('/:id', requirePermission('categories:delete'), async (c
 
     if (children.length > 0) {
       return c.json({ error: 'Cannot delete category with subcategories' }, 400)
+    }
+
+    // Check if category has products associated
+    const productsWithCategory = await db.query.productCategories.findMany({
+      where: eq(productCategories.categoryId, id),
+      limit: 1, // We only need to know if any exists
+    })
+
+    if (productsWithCategory.length > 0) {
+      return c.json({ 
+        error: 'Cannot delete category with associated products. Please move or remove products first.' 
+      }, 400)
+    }
+
+    // Also check legacy category field in products table
+    const productsWithLegacyCategory = await db.query.products.findMany({
+      where: eq(products.category, category.slug),
+      limit: 1,
+    })
+
+    if (productsWithLegacyCategory.length > 0) {
+      return c.json({ 
+        error: 'Cannot delete category with associated products. Please move or remove products first.' 
+      }, 400)
     }
 
     await db.delete(categories).where(eq(categories.id, id))

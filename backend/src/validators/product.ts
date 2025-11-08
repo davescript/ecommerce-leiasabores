@@ -9,7 +9,8 @@ export const productVariantSchema = z.object({
   sku: z.string().nullable().optional(),
 })
 
-export const productSchema = z.object({
+// Base product schema without refinements (for partial updates)
+const productSchemaBase = z.object({
   name: z.string().min(1, 'Nome do produto é obrigatório').max(200, 'Nome muito longo'),
   description: z.string().nullable().optional(),
   shortDescription: z.string().max(500, 'Descrição curta muito longa').nullable().optional(),
@@ -25,7 +26,21 @@ export const productSchema = z.object({
   slug: z.string().optional(),
 })
 
-export const productUpdateSchema = productSchema.partial().extend({
+export const productSchema = productSchemaBase.refine(
+  (data) => {
+    // If originalPrice is provided, it should be greater than price
+    if (data.originalPrice !== null && data.originalPrice !== undefined) {
+      return data.originalPrice > data.price
+    }
+    return true
+  },
+  {
+    message: 'Preço original deve ser maior que o preço promocional',
+    path: ['originalPrice'],
+  }
+)
+
+export const productUpdateSchema = productSchemaBase.partial().extend({
   id: z.string().min(1, 'ID do produto é obrigatório'),
   categories: z.array(z.string()).optional(), // Array of category IDs for many-to-many relationship
   slug: z.string().optional().nullable(),
@@ -36,6 +51,8 @@ export const productUpdateSchema = productSchema.partial().extend({
   stockMinAlert: z.number().int().min(0).optional(),
   // Override price to allow 0 in updates (partial updates)
   price: z.number().min(0, 'Preço não pode ser negativo').max(99999.99, 'Preço muito alto').optional(),
+  // Override originalPrice to allow null/undefined in updates
+  originalPrice: z.number().nullable().optional(),
   // Override images to allow both string URLs and objects
   images: z.union([
     z.array(z.string()),
@@ -45,9 +62,20 @@ export const productUpdateSchema = productSchema.partial().extend({
       r2Key: z.string().optional(),
     })),
   ]).optional(),
-})
+}).refine(
+  (data) => {
+    // If both originalPrice and price are provided, originalPrice should be greater than price
+    if (data.originalPrice !== null && data.originalPrice !== undefined && data.price !== undefined) {
+      return data.originalPrice > data.price
+    }
+    return true
+  },
+  {
+    message: 'Preço original deve ser maior que o preço promocional',
+    path: ['originalPrice'],
+  }
+)
 
 export type ProductInput = z.infer<typeof productSchema>
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>
 export type ProductVariantInput = z.infer<typeof productVariantSchema>
-
