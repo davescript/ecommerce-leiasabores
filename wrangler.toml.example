@@ -1,0 +1,110 @@
+# ============================================
+# ☁️ CONFIGURAÇÃO DO CLOUDFLARE WORKERS
+# ============================================
+#
+# INSTRUÇÕES:
+# 1. Copie este arquivo para wrangler.toml
+# 2. Preencha todos os valores com suas credenciais
+# 3. NUNCA commite o wrangler.toml com valores reais no Git
+#
+# ============================================
+
+name = "ecommerce-backend"
+main = "backend/src/index.ts"
+compatibility_date = "2023-10-30"
+
+# Account ID do Cloudflare (obtido no Dashboard)
+account_id = "SEU_ACCOUNT_ID_AQUI"
+
+# ============================================
+# 🌐 ROTAS DO WORKER (API backend)
+# ============================================
+routes = [
+  "seudominio.com/api/*",
+  "api.seudominio.com/*"
+]
+
+# ============================================
+# ✅ BANCO DE DADOS D1
+# ============================================
+[[d1_databases]]
+binding = "DB"
+database_name = "ecommerce_db"
+database_id = "SEU_DATABASE_ID_AQUI"
+migrations_dir = "backend/migrations"
+
+# ============================================
+# ✅ R2 STORAGE
+# ============================================
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "seu-bucket-r2"
+
+# ============================================
+# ✅ VARIÁVEIS LOCAIS (Development)
+# ============================================
+[vars]
+ENVIRONMENT = "development"
+ALLOWED_ORIGINS = "https://seudominio.com, https://www.seudominio.com, https://seudominio.pages.dev, http://localhost:5173"
+ADMIN_SEED_TOKEN = "seed-token-personalizado-2024"
+PUBLIC_IMAGE_BASE_URL = "https://seudominio.com/images"
+IMAGE_CACHE_BUSTER = "v1"
+R2_DEFAULT_PREFIX = "products/"
+
+# ============================================
+# 🔐 SECRETS (Configurar via wrangler secret put)
+# ============================================
+# 
+# NUNCA coloque secrets diretamente aqui!
+# Use: npx wrangler secret put NOME_DO_SECRET
+#
+# Secrets necessários:
+# - STRIPE_SECRET_KEY
+# - STRIPE_WEBHOOK_SECRET
+# - JWT_SECRET
+#
+# ============================================
+
+# ============================================
+# ✅ AMBIENTE DE PRODUÇÃO
+# ============================================
+[env.production]
+name = "ecommerce-backend-prod"
+account_id = "SEU_ACCOUNT_ID_AQUI"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_id = "SEU_DATABASE_ID_AQUI"
+
+[[env.production.r2_buckets]]
+binding = "R2"
+bucket_name = "seu-bucket-r2"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://seudominio.com, https://www.seudominio.com"
+ADMIN_SEED_TOKEN = "seed-token-personalizado-2024"
+PUBLIC_IMAGE_BASE_URL = "https://seudominio.com/images"
+IMAGE_CACHE_BUSTER = "v1"
+R2_DEFAULT_PREFIX = "products/"
+
+# ============================================
+# ✅ CLOUDFLARE PAGES (FRONTEND)
+# ============================================
+# Local onde o Vite exporta o build final
+pages_build_output_dir = "dist/public"
+
+# Comando para gerar build (usado no Pages)
+build_command = "npm run build:frontend"
+
+# ============================================
+# ⚠️ IMPORTANTE
+# ============================================
+# 
+# 1. NUNCA commite este arquivo com valores reais
+# 2. Use wrangler.toml.example como template
+# 3. Configure secrets via: npx wrangler secret put
+# 4. Use diferentes valores para development e production
+#
+# ============================================
+
